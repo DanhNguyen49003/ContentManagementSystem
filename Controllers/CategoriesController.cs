@@ -6,24 +6,23 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ContentManagementSystem.ApplicationCore.Entities;
-using ContentManagementSystem.ApplicationCore.Interfaces;
 using ContentManagementSystem.DataLayer;
 
 namespace ContentManagementSystem.Controllers
 {
     public class CategoriesController : Controller
     {
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly ContentManageDbContext _context;
 
-        public CategoriesController(IUnitOfWork unitOfWork)
+        public CategoriesController(ContentManageDbContext context)
         {
-            _unitOfWork = unitOfWork;
+            _context = context;
         }
 
         // GET: Categories
         public async Task<IActionResult> Index()
         {
-            return View(await _unitOfWork.Categories.AsQueryable().ToListAsync());
+            return View(await _context.Categories.ToListAsync());
         }
 
         // GET: Categories/Details/5
@@ -34,7 +33,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var category = await _unitOfWork.Categories.AsQueryable()
+            var category = await _context.Categories
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (category == null)
             {
@@ -59,8 +58,8 @@ namespace ContentManagementSystem.Controllers
         {
             if (ModelState.IsValid)
             {
-                _unitOfWork.Categories.Add(category);
-                await _unitOfWork.CompleteAsync();
+                _context.Categories.Add(category);
+                await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
             return View(category);
@@ -74,7 +73,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var category = await _unitOfWork.Categories.GetByIdAsync(id);
+            var category = await _context.Categories.FindAsync(id);
             if (category == null)
             {
                 return NotFound();
@@ -98,8 +97,8 @@ namespace ContentManagementSystem.Controllers
             {
                 try
                 {
-                    _unitOfWork.Categories.Update(category);
-                    await _unitOfWork.CompleteAsync();
+                    _context.Categories.Update(category);
+                    await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -125,7 +124,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var category = await _unitOfWork.Categories.AsQueryable()
+            var category = await _context.Categories
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (category == null)
             {
@@ -140,22 +139,24 @@ namespace ContentManagementSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
-            var category = await _unitOfWork.Categories.GetByIdAsync(id);
+            var category = await _context.Categories.FindAsync(id);
             if (category != null)
             {
-                _unitOfWork.Categories.Remove(category);
+                _context.Categories.Remove(category);
             }
 
-            await _unitOfWork.CompleteAsync();
+            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool CategoryExists(Guid id)
         {
-            return _unitOfWork.Categories.Any(e => e.Id == id);
+            return _context.Categories.Any(e => e.Id == id);
         }
     }
 }
+
+
 
 
 

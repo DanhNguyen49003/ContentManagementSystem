@@ -6,24 +6,23 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ContentManagementSystem.ApplicationCore.Entities;
-using ContentManagementSystem.ApplicationCore.Interfaces;
 using ContentManagementSystem.DataLayer;
 
 namespace ContentManagementSystem.Controllers
 {
     public class FaqsController : Controller
     {
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly ContentManageDbContext _context;
 
-        public FaqsController(IUnitOfWork unitOfWork)
+        public FaqsController(ContentManageDbContext context)
         {
-            _unitOfWork = unitOfWork;
+            _context = context;
         }
 
         // GET: Faqs
         public async Task<IActionResult> Index()
         {
-            return View(await _unitOfWork.Faqs.AsQueryable().ToListAsync());
+            return View(await _context.Faqs.ToListAsync());
         }
 
         // GET: Faqs/Details/5
@@ -34,7 +33,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var faq = await _unitOfWork.Faqs.AsQueryable()
+            var faq = await _context.Faqs
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (faq == null)
             {
@@ -60,8 +59,8 @@ namespace ContentManagementSystem.Controllers
             if (ModelState.IsValid)
             {
                 faq.Id = Guid.NewGuid();
-                _unitOfWork.Faqs.Add(faq);
-                await _unitOfWork.CompleteAsync();
+                _context.Faqs.Add(faq);
+                await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
             return View(faq);
@@ -75,7 +74,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var faq = await _unitOfWork.Faqs.GetByIdAsync(id);
+            var faq = await _context.Faqs.FindAsync(id);
             if (faq == null)
             {
                 return NotFound();
@@ -99,8 +98,8 @@ namespace ContentManagementSystem.Controllers
             {
                 try
                 {
-                    _unitOfWork.Faqs.Update(faq);
-                    await _unitOfWork.CompleteAsync();
+                    _context.Faqs.Update(faq);
+                    await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -126,7 +125,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var faq = await _unitOfWork.Faqs.AsQueryable()
+            var faq = await _context.Faqs
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (faq == null)
             {
@@ -141,21 +140,23 @@ namespace ContentManagementSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
-            var faq = await _unitOfWork.Faqs.GetByIdAsync(id);
+            var faq = await _context.Faqs.FindAsync(id);
             if (faq != null)
             {
-                _unitOfWork.Faqs.Remove(faq);
+                _context.Faqs.Remove(faq);
             }
 
-            await _unitOfWork.CompleteAsync();
+            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool FaqExists(Guid id)
         {
-            return _unitOfWork.Faqs.Any(e => e.Id == id);
+            return _context.Faqs.Any(e => e.Id == id);
         }
     }
 }
+
+
 
 

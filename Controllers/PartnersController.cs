@@ -6,24 +6,23 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ContentManagementSystem.ApplicationCore.Entities;
-using ContentManagementSystem.ApplicationCore.Interfaces;
 using ContentManagementSystem.DataLayer;
 
 namespace ContentManagementSystem.Controllers
 {
     public class PartnersController : Controller
     {
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly ContentManageDbContext _context;
 
-        public PartnersController(IUnitOfWork unitOfWork)
+        public PartnersController(ContentManageDbContext context)
         {
-            _unitOfWork = unitOfWork;
+            _context = context;
         }
 
         // GET: Partners
         public async Task<IActionResult> Index()
         {
-            return View(await _unitOfWork.Partners.AsQueryable().ToListAsync());
+            return View(await _context.Partners.ToListAsync());
         }
 
         // GET: Partners/Details/5
@@ -34,7 +33,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var partner = await _unitOfWork.Partners.AsQueryable()
+            var partner = await _context.Partners
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (partner == null)
             {
@@ -60,8 +59,8 @@ namespace ContentManagementSystem.Controllers
             if (ModelState.IsValid)
             {
                 partner.Id = Guid.NewGuid();
-                _unitOfWork.Partners.Add(partner);
-                await _unitOfWork.CompleteAsync();
+                _context.Partners.Add(partner);
+                await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
             return View(partner);
@@ -75,7 +74,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var partner = await _unitOfWork.Partners.GetByIdAsync(id);
+            var partner = await _context.Partners.FindAsync(id);
             if (partner == null)
             {
                 return NotFound();
@@ -99,8 +98,8 @@ namespace ContentManagementSystem.Controllers
             {
                 try
                 {
-                    _unitOfWork.Partners.Update(partner);
-                    await _unitOfWork.CompleteAsync();
+                    _context.Partners.Update(partner);
+                    await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -126,7 +125,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var partner = await _unitOfWork.Partners.AsQueryable()
+            var partner = await _context.Partners
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (partner == null)
             {
@@ -141,21 +140,23 @@ namespace ContentManagementSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
-            var partner = await _unitOfWork.Partners.GetByIdAsync(id);
+            var partner = await _context.Partners.FindAsync(id);
             if (partner != null)
             {
-                _unitOfWork.Partners.Remove(partner);
+                _context.Partners.Remove(partner);
             }
 
-            await _unitOfWork.CompleteAsync();
+            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool PartnerExists(Guid id)
         {
-            return _unitOfWork.Partners.Any(e => e.Id == id);
+            return _context.Partners.Any(e => e.Id == id);
         }
     }
 }
+
+
 
 

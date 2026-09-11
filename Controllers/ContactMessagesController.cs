@@ -6,24 +6,23 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ContentManagementSystem.ApplicationCore.Entities;
-using ContentManagementSystem.ApplicationCore.Interfaces;
 using ContentManagementSystem.DataLayer;
 
 namespace ContentManagementSystem.Controllers
 {
     public class ContactMessagesController : Controller
     {
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly ContentManageDbContext _context;
 
-        public ContactMessagesController(IUnitOfWork unitOfWork)
+        public ContactMessagesController(ContentManageDbContext context)
         {
-            _unitOfWork = unitOfWork;
+            _context = context;
         }
 
         // GET: ContactMessages
         public async Task<IActionResult> Index()
         {
-            return View(await _unitOfWork.ContactMessages.AsQueryable().ToListAsync());
+            return View(await _context.ContactMessages.ToListAsync());
         }
 
         // GET: ContactMessages/Details/5
@@ -34,7 +33,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var contactMessage = await _unitOfWork.ContactMessages.AsQueryable()
+            var contactMessage = await _context.ContactMessages
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (contactMessage == null)
             {
@@ -60,8 +59,8 @@ namespace ContentManagementSystem.Controllers
             if (ModelState.IsValid)
             {
                 contactMessage.Id = Guid.NewGuid();
-                _unitOfWork.ContactMessages.Add(contactMessage);
-                await _unitOfWork.CompleteAsync();
+                _context.ContactMessages.Add(contactMessage);
+                await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
             return View(contactMessage);
@@ -75,7 +74,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var contactMessage = await _unitOfWork.ContactMessages.GetByIdAsync(id);
+            var contactMessage = await _context.ContactMessages.FindAsync(id);
             if (contactMessage == null)
             {
                 return NotFound();
@@ -99,8 +98,8 @@ namespace ContentManagementSystem.Controllers
             {
                 try
                 {
-                    _unitOfWork.ContactMessages.Update(contactMessage);
-                    await _unitOfWork.CompleteAsync();
+                    _context.ContactMessages.Update(contactMessage);
+                    await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -126,7 +125,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var contactMessage = await _unitOfWork.ContactMessages.AsQueryable()
+            var contactMessage = await _context.ContactMessages
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (contactMessage == null)
             {
@@ -141,21 +140,23 @@ namespace ContentManagementSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
-            var contactMessage = await _unitOfWork.ContactMessages.GetByIdAsync(id);
+            var contactMessage = await _context.ContactMessages.FindAsync(id);
             if (contactMessage != null)
             {
-                _unitOfWork.ContactMessages.Remove(contactMessage);
+                _context.ContactMessages.Remove(contactMessage);
             }
 
-            await _unitOfWork.CompleteAsync();
+            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool ContactMessageExists(Guid id)
         {
-            return _unitOfWork.ContactMessages.Any(e => e.Id == id);
+            return _context.ContactMessages.Any(e => e.Id == id);
         }
     }
 }
+
+
 
 

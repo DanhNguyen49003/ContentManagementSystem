@@ -6,24 +6,23 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ContentManagementSystem.ApplicationCore.Entities;
-using ContentManagementSystem.ApplicationCore.Interfaces;
 using ContentManagementSystem.DataLayer;
 
 namespace ContentManagementSystem.Controllers
 {
     public class TestimonialsController : Controller
     {
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly ContentManageDbContext _context;
 
-        public TestimonialsController(IUnitOfWork unitOfWork)
+        public TestimonialsController(ContentManageDbContext context)
         {
-            _unitOfWork = unitOfWork;
+            _context = context;
         }
 
         // GET: Testimonials
         public async Task<IActionResult> Index()
         {
-            return View(await _unitOfWork.Testimonials.AsQueryable().ToListAsync());
+            return View(await _context.Testimonials.ToListAsync());
         }
 
         // GET: Testimonials/Details/5
@@ -34,7 +33,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var testimonial = await _unitOfWork.Testimonials.AsQueryable()
+            var testimonial = await _context.Testimonials
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (testimonial == null)
             {
@@ -60,8 +59,8 @@ namespace ContentManagementSystem.Controllers
             if (ModelState.IsValid)
             {
                 testimonial.Id = Guid.NewGuid();
-                _unitOfWork.Testimonials.Add(testimonial);
-                await _unitOfWork.CompleteAsync();
+                _context.Testimonials.Add(testimonial);
+                await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
             return View(testimonial);
@@ -75,7 +74,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var testimonial = await _unitOfWork.Testimonials.GetByIdAsync(id);
+            var testimonial = await _context.Testimonials.FindAsync(id);
             if (testimonial == null)
             {
                 return NotFound();
@@ -99,8 +98,8 @@ namespace ContentManagementSystem.Controllers
             {
                 try
                 {
-                    _unitOfWork.Testimonials.Update(testimonial);
-                    await _unitOfWork.CompleteAsync();
+                    _context.Testimonials.Update(testimonial);
+                    await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -126,7 +125,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var testimonial = await _unitOfWork.Testimonials.AsQueryable()
+            var testimonial = await _context.Testimonials
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (testimonial == null)
             {
@@ -141,21 +140,23 @@ namespace ContentManagementSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
-            var testimonial = await _unitOfWork.Testimonials.GetByIdAsync(id);
+            var testimonial = await _context.Testimonials.FindAsync(id);
             if (testimonial != null)
             {
-                _unitOfWork.Testimonials.Remove(testimonial);
+                _context.Testimonials.Remove(testimonial);
             }
 
-            await _unitOfWork.CompleteAsync();
+            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool TestimonialExists(Guid id)
         {
-            return _unitOfWork.Testimonials.Any(e => e.Id == id);
+            return _context.Testimonials.Any(e => e.Id == id);
         }
     }
 }
+
+
 
 

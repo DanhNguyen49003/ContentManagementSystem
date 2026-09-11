@@ -6,24 +6,23 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ContentManagementSystem.ApplicationCore.Entities;
-using ContentManagementSystem.ApplicationCore.Interfaces;
 using ContentManagementSystem.DataLayer;
 
 namespace ContentManagementSystem.Controllers
 {
     public class NewsletterSubscribersController : Controller
     {
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly ContentManageDbContext _context;
 
-        public NewsletterSubscribersController(IUnitOfWork unitOfWork)
+        public NewsletterSubscribersController(ContentManageDbContext context)
         {
-            _unitOfWork = unitOfWork;
+            _context = context;
         }
 
         // GET: NewsletterSubscribers
         public async Task<IActionResult> Index()
         {
-            return View(await _unitOfWork.NewsletterSubscribers.AsQueryable().ToListAsync());
+            return View(await _context.NewsletterSubscribers.ToListAsync());
         }
 
         // GET: NewsletterSubscribers/Details/5
@@ -34,7 +33,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var newsletterSubscriber = await _unitOfWork.NewsletterSubscribers.AsQueryable()
+            var newsletterSubscriber = await _context.NewsletterSubscribers
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (newsletterSubscriber == null)
             {
@@ -60,8 +59,8 @@ namespace ContentManagementSystem.Controllers
             if (ModelState.IsValid)
             {
                 newsletterSubscriber.Id = Guid.NewGuid();
-                _unitOfWork.NewsletterSubscribers.Add(newsletterSubscriber);
-                await _unitOfWork.CompleteAsync();
+                _context.NewsletterSubscribers.Add(newsletterSubscriber);
+                await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
             return View(newsletterSubscriber);
@@ -75,7 +74,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var newsletterSubscriber = await _unitOfWork.NewsletterSubscribers.GetByIdAsync(id);
+            var newsletterSubscriber = await _context.NewsletterSubscribers.FindAsync(id);
             if (newsletterSubscriber == null)
             {
                 return NotFound();
@@ -99,8 +98,8 @@ namespace ContentManagementSystem.Controllers
             {
                 try
                 {
-                    _unitOfWork.NewsletterSubscribers.Update(newsletterSubscriber);
-                    await _unitOfWork.CompleteAsync();
+                    _context.NewsletterSubscribers.Update(newsletterSubscriber);
+                    await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -126,7 +125,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var newsletterSubscriber = await _unitOfWork.NewsletterSubscribers.AsQueryable()
+            var newsletterSubscriber = await _context.NewsletterSubscribers
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (newsletterSubscriber == null)
             {
@@ -141,21 +140,23 @@ namespace ContentManagementSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
-            var newsletterSubscriber = await _unitOfWork.NewsletterSubscribers.GetByIdAsync(id);
+            var newsletterSubscriber = await _context.NewsletterSubscribers.FindAsync(id);
             if (newsletterSubscriber != null)
             {
-                _unitOfWork.NewsletterSubscribers.Remove(newsletterSubscriber);
+                _context.NewsletterSubscribers.Remove(newsletterSubscriber);
             }
 
-            await _unitOfWork.CompleteAsync();
+            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool NewsletterSubscriberExists(Guid id)
         {
-            return _unitOfWork.NewsletterSubscribers.Any(e => e.Id == id);
+            return _context.NewsletterSubscribers.Any(e => e.Id == id);
         }
     }
 }
+
+
 
 

@@ -1,0 +1,27 @@
+@model ContentManagementSystem.ViewModels.SidebarViewModel
+
+<div class=""sidebar"">
+    <div class=""card mb-4"">
+        <div class=""card-header"">Categories</div>
+        <div class=""card-body"">
+            <ul class=""list-unstyled mb-0"">
+                @foreach (var category in Model.Categories)
+                {
+                    <li><a href=""/Category/@category.Slug"">@category.Name</a></li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    <div class=""card mb-4"">
+        <div class=""card-header"">Recent Posts</div>
+        <div class=""card-body"">
+            <ul class=""list-unstyled mb-0"">
+                @foreach (var post in Model.RecentPosts)
+                {
+                    <li><a href=""/Post/@post.Slug"">@post.Title</a></li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>

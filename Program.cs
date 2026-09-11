@@ -7,13 +7,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 
 // Dependency Injection
-builder.Services.AddScoped<ContentManagementSystem.ApplicationCore.Interfaces.IUnitOfWork, ContentManagementSystem.DataLayer.Repositories.UnitOfWork>();
 
 builder.Services.AddDbContext<ContentManageDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("ContentConnection")));
 
 builder.Services.AddDbContext<ContentManageIdentityDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("IdentityConnection") ?? builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("ContentIdentityConnection") ?? builder.Configuration.GetConnectionString("DefaultConnection")));
 
 
 
@@ -39,6 +38,7 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
+
 
 
 
