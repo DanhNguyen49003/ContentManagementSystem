@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ContentManagementSystem.DataLayer;
+using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,8 @@ builder.Services.AddControllersWithViews();
 
 builder.Services.AddDbContext<ContentManageDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("ContentConnection")));
+
+builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true).AddEntityFrameworkStores<ContentManageIdentityDbContext>();
 
 builder.Services.AddDbContext<ContentManageIdentityDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("ContentIdentityConnection") ?? builder.Configuration.GetConnectionString("DefaultConnection")));
