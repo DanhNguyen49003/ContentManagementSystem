@@ -6,23 +6,24 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ContentManagementSystem.ApplicationCore.Entities;
+using ContentManagementSystem.ApplicationCore.Interfaces;
 using ContentManagementSystem.DataLayer;
 
 namespace ContentManagementSystem.Controllers
 {
     public class MenusController : Controller
     {
-        private readonly ContentManageDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public MenusController(ContentManageDbContext context)
+        public MenusController(IUnitOfWork unitOfWork)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
         }
 
         // GET: Menus
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Menus.ToListAsync());
+            return View(await _unitOfWork.Menus.AsQueryable().ToListAsync());
         }
 
         // GET: Menus/Details/5
@@ -33,7 +34,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var menu = await _context.Menus
+            var menu = await _unitOfWork.Menus.AsQueryable()
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (menu == null)
             {
@@ -59,8 +60,8 @@ namespace ContentManagementSystem.Controllers
             if (ModelState.IsValid)
             {
                 menu.Id = Guid.NewGuid();
-                _context.Add(menu);
-                await _context.SaveChangesAsync();
+                _unitOfWork.Menus.Add(menu);
+                await _unitOfWork.CompleteAsync();
                 return RedirectToAction(nameof(Index));
             }
             return View(menu);
@@ -74,7 +75,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var menu = await _context.Menus.FindAsync(id);
+            var menu = await _unitOfWork.Menus.GetByIdAsync(id);
             if (menu == null)
             {
                 return NotFound();
@@ -98,8 +99,8 @@ namespace ContentManagementSystem.Controllers
             {
                 try
                 {
-                    _context.Update(menu);
-                    await _context.SaveChangesAsync();
+                    _unitOfWork.Menus.Update(menu);
+                    await _unitOfWork.CompleteAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -125,7 +126,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var menu = await _context.Menus
+            var menu = await _unitOfWork.Menus.AsQueryable()
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (menu == null)
             {
@@ -140,19 +141,21 @@ namespace ContentManagementSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
-            var menu = await _context.Menus.FindAsync(id);
+            var menu = await _unitOfWork.Menus.GetByIdAsync(id);
             if (menu != null)
             {
-                _context.Menus.Remove(menu);
+                _unitOfWork.Menus.Remove(menu);
             }
 
-            await _context.SaveChangesAsync();
+            await _unitOfWork.CompleteAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool MenuExists(Guid id)
         {
-            return _context.Menus.Any(e => e.Id == id);
+            return _unitOfWork.Menus.Any(e => e.Id == id);
         }
     }
 }
+
+

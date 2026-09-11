@@ -6,23 +6,24 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ContentManagementSystem.ApplicationCore.Entities;
+using ContentManagementSystem.ApplicationCore.Interfaces;
 using ContentManagementSystem.DataLayer;
 
 namespace ContentManagementSystem.Controllers
 {
     public class MenuItemsController : Controller
     {
-        private readonly ContentManageDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public MenuItemsController(ContentManageDbContext context)
+        public MenuItemsController(IUnitOfWork unitOfWork)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
         }
 
         // GET: MenuItems
         public async Task<IActionResult> Index()
         {
-            var contentManageDbContext = _context.MenuItems.Include(m => m.Menu);
+            var contentManageDbContext = _unitOfWork.MenuItems.AsQueryable().Include(m => m.Menu);
             return View(await contentManageDbContext.ToListAsync());
         }
 
@@ -34,7 +35,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var menuItem = await _context.MenuItems
+            var menuItem = await _unitOfWork.MenuItems.AsQueryable()
                 .Include(m => m.Menu)
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (menuItem == null)
@@ -48,7 +49,7 @@ namespace ContentManagementSystem.Controllers
         // GET: MenuItems/Create
         public IActionResult Create()
         {
-            ViewData["MenuId"] = new SelectList(_context.Menus, "Id", "Name");
+            ViewData["MenuId"] = new SelectList(_unitOfWork.Menus.AsQueryable(), "Id", "Name");
             return View();
         }
 
@@ -62,11 +63,11 @@ namespace ContentManagementSystem.Controllers
             if (ModelState.IsValid)
             {
                 menuItem.Id = Guid.NewGuid();
-                _context.Add(menuItem);
-                await _context.SaveChangesAsync();
+                _unitOfWork.MenuItems.Add(menuItem);
+                await _unitOfWork.CompleteAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["MenuId"] = new SelectList(_context.Menus, "Id", "Name", menuItem.MenuId);
+            ViewData["MenuId"] = new SelectList(_unitOfWork.Menus.AsQueryable(), "Id", "Name", menuItem.MenuId);
             return View(menuItem);
         }
 
@@ -78,12 +79,12 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var menuItem = await _context.MenuItems.FindAsync(id);
+            var menuItem = await _unitOfWork.MenuItems.GetByIdAsync(id);
             if (menuItem == null)
             {
                 return NotFound();
             }
-            ViewData["MenuId"] = new SelectList(_context.Menus, "Id", "Name", menuItem.MenuId);
+            ViewData["MenuId"] = new SelectList(_unitOfWork.Menus.AsQueryable(), "Id", "Name", menuItem.MenuId);
             return View(menuItem);
         }
 
@@ -103,8 +104,8 @@ namespace ContentManagementSystem.Controllers
             {
                 try
                 {
-                    _context.Update(menuItem);
-                    await _context.SaveChangesAsync();
+                    _unitOfWork.MenuItems.Update(menuItem);
+                    await _unitOfWork.CompleteAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -119,7 +120,7 @@ namespace ContentManagementSystem.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["MenuId"] = new SelectList(_context.Menus, "Id", "Name", menuItem.MenuId);
+            ViewData["MenuId"] = new SelectList(_unitOfWork.Menus.AsQueryable(), "Id", "Name", menuItem.MenuId);
             return View(menuItem);
         }
 
@@ -131,7 +132,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var menuItem = await _context.MenuItems
+            var menuItem = await _unitOfWork.MenuItems.AsQueryable()
                 .Include(m => m.Menu)
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (menuItem == null)
@@ -147,19 +148,21 @@ namespace ContentManagementSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
-            var menuItem = await _context.MenuItems.FindAsync(id);
+            var menuItem = await _unitOfWork.MenuItems.GetByIdAsync(id);
             if (menuItem != null)
             {
-                _context.MenuItems.Remove(menuItem);
+                _unitOfWork.MenuItems.Remove(menuItem);
             }
 
-            await _context.SaveChangesAsync();
+            await _unitOfWork.CompleteAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool MenuItemExists(Guid id)
         {
-            return _context.MenuItems.Any(e => e.Id == id);
+            return _unitOfWork.MenuItems.Any(e => e.Id == id);
         }
     }
 }
+
+

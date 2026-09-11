@@ -6,23 +6,24 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ContentManagementSystem.ApplicationCore.Entities;
+using ContentManagementSystem.ApplicationCore.Interfaces;
 using ContentManagementSystem.DataLayer;
 
 namespace ContentManagementSystem.Controllers
 {
     public class BannersController : Controller
     {
-        private readonly ContentManageDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public BannersController(ContentManageDbContext context)
+        public BannersController(IUnitOfWork unitOfWork)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
         }
 
         // GET: Banners
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Banners.ToListAsync());
+            return View(await _unitOfWork.Banners.AsQueryable().ToListAsync());
         }
 
         // GET: Banners/Details/5
@@ -33,7 +34,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var banner = await _context.Banners
+            var banner = await _unitOfWork.Banners.AsQueryable()
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (banner == null)
             {
@@ -59,8 +60,8 @@ namespace ContentManagementSystem.Controllers
             if (ModelState.IsValid)
             {
                 banner.Id = Guid.NewGuid();
-                _context.Add(banner);
-                await _context.SaveChangesAsync();
+                _unitOfWork.Banners.Add(banner);
+                await _unitOfWork.CompleteAsync();
                 return RedirectToAction(nameof(Index));
             }
             return View(banner);
@@ -74,7 +75,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var banner = await _context.Banners.FindAsync(id);
+            var banner = await _unitOfWork.Banners.GetByIdAsync(id);
             if (banner == null)
             {
                 return NotFound();
@@ -98,8 +99,8 @@ namespace ContentManagementSystem.Controllers
             {
                 try
                 {
-                    _context.Update(banner);
-                    await _context.SaveChangesAsync();
+                    _unitOfWork.Banners.Update(banner);
+                    await _unitOfWork.CompleteAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -125,7 +126,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var banner = await _context.Banners
+            var banner = await _unitOfWork.Banners.AsQueryable()
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (banner == null)
             {
@@ -140,19 +141,21 @@ namespace ContentManagementSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
-            var banner = await _context.Banners.FindAsync(id);
+            var banner = await _unitOfWork.Banners.GetByIdAsync(id);
             if (banner != null)
             {
-                _context.Banners.Remove(banner);
+                _unitOfWork.Banners.Remove(banner);
             }
 
-            await _context.SaveChangesAsync();
+            await _unitOfWork.CompleteAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool BannerExists(Guid id)
         {
-            return _context.Banners.Any(e => e.Id == id);
+            return _unitOfWork.Banners.Any(e => e.Id == id);
         }
     }
 }
+
+

@@ -6,23 +6,26 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ContentManagementSystem.ApplicationCore.Entities;
+using ContentManagementSystem.ApplicationCore.Interfaces;
 using ContentManagementSystem.DataLayer;
 
 namespace ContentManagementSystem.Controllers
 {
     public class PostsController : Controller
     {
-        private readonly ContentManageDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ContentManageIdentityDbContext _identityContext;
 
-        public PostsController(ContentManageDbContext context)
+        public PostsController(IUnitOfWork unitOfWork, ContentManageIdentityDbContext identityContext)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
+            _identityContext = identityContext;
         }
 
         // GET: Posts
         public async Task<IActionResult> Index()
         {
-            var contentManageDbContext = _context.Posts.Include(p => p.Author).Include(p => p.Category);
+            var contentManageDbContext = _unitOfWork.Posts.AsQueryable().Include(p => p.Author).Include(p => p.Category);
             return View(await contentManageDbContext.ToListAsync());
         }
 
@@ -34,7 +37,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var post = await _context.Posts
+            var post = await _unitOfWork.Posts.AsQueryable()
                 .Include(p => p.Author)
                 .Include(p => p.Category)
                 .FirstOrDefaultAsync(m => m.Id == id);
@@ -49,8 +52,8 @@ namespace ContentManagementSystem.Controllers
         // GET: Posts/Create
         public IActionResult Create()
         {
-            ViewData["AuthorId"] = new SelectList(_context.Users, "Id", "Email");
-            ViewData["CategoryId"] = new SelectList(_context.Categories, "Id", "Description");
+            ViewData["AuthorId"] = new SelectList(_identityContext.Users, "Id", "Email");
+            ViewData["CategoryId"] = new SelectList(_unitOfWork.Categories.AsQueryable(), "Id", "Description");
             return View();
         }
 
@@ -63,12 +66,12 @@ namespace ContentManagementSystem.Controllers
         {
             if (ModelState.IsValid)
             {
-                _context.Add(post);
-                await _context.SaveChangesAsync();
+                _unitOfWork.Posts.Add(post);
+                await _unitOfWork.CompleteAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["AuthorId"] = new SelectList(_context.Users, "Id", "Email", post.AuthorId);
-            ViewData["CategoryId"] = new SelectList(_context.Categories, "Id", "Description", post.CategoryId);
+            ViewData["AuthorId"] = new SelectList(_identityContext.Users, "Id", "Email", post.AuthorId);
+            ViewData["CategoryId"] = new SelectList(_unitOfWork.Categories.AsQueryable(), "Id", "Description", post.CategoryId);
             return View(post);
         }
 
@@ -80,13 +83,13 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var post = await _context.Posts.FindAsync(id);
+            var post = await _unitOfWork.Posts.GetByIdAsync(id);
             if (post == null)
             {
                 return NotFound();
             }
-            ViewData["AuthorId"] = new SelectList(_context.Users, "Id", "Email", post.AuthorId);
-            ViewData["CategoryId"] = new SelectList(_context.Categories, "Id", "Description", post.CategoryId);
+            ViewData["AuthorId"] = new SelectList(_identityContext.Users, "Id", "Email", post.AuthorId);
+            ViewData["CategoryId"] = new SelectList(_unitOfWork.Categories.AsQueryable(), "Id", "Description", post.CategoryId);
             return View(post);
         }
 
@@ -106,8 +109,8 @@ namespace ContentManagementSystem.Controllers
             {
                 try
                 {
-                    _context.Update(post);
-                    await _context.SaveChangesAsync();
+                    _unitOfWork.Posts.Update(post);
+                    await _unitOfWork.CompleteAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -122,8 +125,8 @@ namespace ContentManagementSystem.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["AuthorId"] = new SelectList(_context.Users, "Id", "Email", post.AuthorId);
-            ViewData["CategoryId"] = new SelectList(_context.Categories, "Id", "Description", post.CategoryId);
+            ViewData["AuthorId"] = new SelectList(_identityContext.Users, "Id", "Email", post.AuthorId);
+            ViewData["CategoryId"] = new SelectList(_unitOfWork.Categories.AsQueryable(), "Id", "Description", post.CategoryId);
             return View(post);
         }
 
@@ -135,7 +138,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var post = await _context.Posts
+            var post = await _unitOfWork.Posts.AsQueryable()
                 .Include(p => p.Author)
                 .Include(p => p.Category)
                 .FirstOrDefaultAsync(m => m.Id == id);
@@ -152,20 +155,23 @@ namespace ContentManagementSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
-            var post = await _context.Posts.FindAsync(id);
+            var post = await _unitOfWork.Posts.GetByIdAsync(id);
             if (post != null)
             {
-                _context.Posts.Remove(post);
+                _unitOfWork.Posts.Remove(post);
             }
 
-            await _context.SaveChangesAsync();
+            await _unitOfWork.CompleteAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool PostExists(Guid id)
         {
-            return _context.Posts.Any(e => e.Id == id);
+            return _unitOfWork.Posts.Any(e => e.Id == id);
         }
     }
 }
+
+
+
 

@@ -6,23 +6,24 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ContentManagementSystem.ApplicationCore.Entities;
+using ContentManagementSystem.ApplicationCore.Interfaces;
 using ContentManagementSystem.DataLayer;
 
 namespace ContentManagementSystem.Controllers
 {
     public class TagsController : Controller
     {
-        private readonly ContentManageDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public TagsController(ContentManageDbContext context)
+        public TagsController(IUnitOfWork unitOfWork)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
         }
 
         // GET: Tags
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Tags.ToListAsync());
+            return View(await _unitOfWork.Tags.AsQueryable().ToListAsync());
         }
 
         // GET: Tags/Details/5
@@ -33,7 +34,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var tag = await _context.Tags
+            var tag = await _unitOfWork.Tags.AsQueryable()
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (tag == null)
             {
@@ -58,8 +59,8 @@ namespace ContentManagementSystem.Controllers
         {
             if (ModelState.IsValid)
             {
-                _context.Add(tag);
-                await _context.SaveChangesAsync();
+                _unitOfWork.Tags.Add(tag);
+                await _unitOfWork.CompleteAsync();
                 return RedirectToAction(nameof(Index));
             }
             return View(tag);
@@ -73,7 +74,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var tag = await _context.Tags.FindAsync(id);
+            var tag = await _unitOfWork.Tags.GetByIdAsync(id);
             if (tag == null)
             {
                 return NotFound();
@@ -97,8 +98,8 @@ namespace ContentManagementSystem.Controllers
             {
                 try
                 {
-                    _context.Update(tag);
-                    await _context.SaveChangesAsync();
+                    _unitOfWork.Tags.Update(tag);
+                    await _unitOfWork.CompleteAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -124,7 +125,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var tag = await _context.Tags
+            var tag = await _unitOfWork.Tags.AsQueryable()
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (tag == null)
             {
@@ -139,20 +140,22 @@ namespace ContentManagementSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
-            var tag = await _context.Tags.FindAsync(id);
+            var tag = await _unitOfWork.Tags.GetByIdAsync(id);
             if (tag != null)
             {
-                _context.Tags.Remove(tag);
+                _unitOfWork.Tags.Remove(tag);
             }
 
-            await _context.SaveChangesAsync();
+            await _unitOfWork.CompleteAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool TagExists(Guid id)
         {
-            return _context.Tags.Any(e => e.Id == id);
+            return _unitOfWork.Tags.Any(e => e.Id == id);
         }
     }
 }
+
+
 

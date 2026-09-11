@@ -6,23 +6,24 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ContentManagementSystem.ApplicationCore.Entities;
+using ContentManagementSystem.ApplicationCore.Interfaces;
 using ContentManagementSystem.DataLayer;
 
 namespace ContentManagementSystem.Controllers
 {
     public class EventsController : Controller
     {
-        private readonly ContentManageDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public EventsController(ContentManageDbContext context)
+        public EventsController(IUnitOfWork unitOfWork)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
         }
 
         // GET: Events
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Events.ToListAsync());
+            return View(await _unitOfWork.Events.AsQueryable().ToListAsync());
         }
 
         // GET: Events/Details/5
@@ -33,7 +34,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var @event = await _context.Events
+            var @event = await _unitOfWork.Events.AsQueryable()
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (@event == null)
             {
@@ -59,8 +60,8 @@ namespace ContentManagementSystem.Controllers
             if (ModelState.IsValid)
             {
                 @event.Id = Guid.NewGuid();
-                _context.Add(@event);
-                await _context.SaveChangesAsync();
+                _unitOfWork.Events.Add(@event);
+                await _unitOfWork.CompleteAsync();
                 return RedirectToAction(nameof(Index));
             }
             return View(@event);
@@ -74,7 +75,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var @event = await _context.Events.FindAsync(id);
+            var @event = await _unitOfWork.Events.GetByIdAsync(id);
             if (@event == null)
             {
                 return NotFound();
@@ -98,8 +99,8 @@ namespace ContentManagementSystem.Controllers
             {
                 try
                 {
-                    _context.Update(@event);
-                    await _context.SaveChangesAsync();
+                    _unitOfWork.Events.Update(@event);
+                    await _unitOfWork.CompleteAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -125,7 +126,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var @event = await _context.Events
+            var @event = await _unitOfWork.Events.AsQueryable()
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (@event == null)
             {
@@ -140,19 +141,21 @@ namespace ContentManagementSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
-            var @event = await _context.Events.FindAsync(id);
+            var @event = await _unitOfWork.Events.GetByIdAsync(id);
             if (@event != null)
             {
-                _context.Events.Remove(@event);
+                _unitOfWork.Events.Remove(@event);
             }
 
-            await _context.SaveChangesAsync();
+            await _unitOfWork.CompleteAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool EventExists(Guid id)
         {
-            return _context.Events.Any(e => e.Id == id);
+            return _unitOfWork.Events.Any(e => e.Id == id);
         }
     }
 }
+
+

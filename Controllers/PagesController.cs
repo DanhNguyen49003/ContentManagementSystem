@@ -6,23 +6,24 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ContentManagementSystem.ApplicationCore.Entities;
+using ContentManagementSystem.ApplicationCore.Interfaces;
 using ContentManagementSystem.DataLayer;
 
 namespace ContentManagementSystem.Controllers
 {
     public class PagesController : Controller
     {
-        private readonly ContentManageDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public PagesController(ContentManageDbContext context)
+        public PagesController(IUnitOfWork unitOfWork)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
         }
 
         // GET: Pages
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Pages.ToListAsync());
+            return View(await _unitOfWork.Pages.AsQueryable().ToListAsync());
         }
 
         // GET: Pages/Details/5
@@ -33,7 +34,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var page = await _context.Pages
+            var page = await _unitOfWork.Pages.AsQueryable()
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (page == null)
             {
@@ -59,8 +60,8 @@ namespace ContentManagementSystem.Controllers
             if (ModelState.IsValid)
             {
                 page.Id = Guid.NewGuid();
-                _context.Add(page);
-                await _context.SaveChangesAsync();
+                _unitOfWork.Pages.Add(page);
+                await _unitOfWork.CompleteAsync();
                 return RedirectToAction(nameof(Index));
             }
             return View(page);
@@ -74,7 +75,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var page = await _context.Pages.FindAsync(id);
+            var page = await _unitOfWork.Pages.GetByIdAsync(id);
             if (page == null)
             {
                 return NotFound();
@@ -98,8 +99,8 @@ namespace ContentManagementSystem.Controllers
             {
                 try
                 {
-                    _context.Update(page);
-                    await _context.SaveChangesAsync();
+                    _unitOfWork.Pages.Update(page);
+                    await _unitOfWork.CompleteAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -125,7 +126,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var page = await _context.Pages
+            var page = await _unitOfWork.Pages.AsQueryable()
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (page == null)
             {
@@ -140,19 +141,21 @@ namespace ContentManagementSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
-            var page = await _context.Pages.FindAsync(id);
+            var page = await _unitOfWork.Pages.GetByIdAsync(id);
             if (page != null)
             {
-                _context.Pages.Remove(page);
+                _unitOfWork.Pages.Remove(page);
             }
 
-            await _context.SaveChangesAsync();
+            await _unitOfWork.CompleteAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool PageExists(Guid id)
         {
-            return _context.Pages.Any(e => e.Id == id);
+            return _unitOfWork.Pages.Any(e => e.Id == id);
         }
     }
 }
+
+

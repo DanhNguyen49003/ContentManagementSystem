@@ -6,23 +6,24 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ContentManagementSystem.ApplicationCore.Entities;
+using ContentManagementSystem.ApplicationCore.Interfaces;
 using ContentManagementSystem.DataLayer;
 
 namespace ContentManagementSystem.Controllers
 {
     public class ContactMessagesController : Controller
     {
-        private readonly ContentManageDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public ContactMessagesController(ContentManageDbContext context)
+        public ContactMessagesController(IUnitOfWork unitOfWork)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
         }
 
         // GET: ContactMessages
         public async Task<IActionResult> Index()
         {
-            return View(await _context.ContactMessages.ToListAsync());
+            return View(await _unitOfWork.ContactMessages.AsQueryable().ToListAsync());
         }
 
         // GET: ContactMessages/Details/5
@@ -33,7 +34,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var contactMessage = await _context.ContactMessages
+            var contactMessage = await _unitOfWork.ContactMessages.AsQueryable()
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (contactMessage == null)
             {
@@ -59,8 +60,8 @@ namespace ContentManagementSystem.Controllers
             if (ModelState.IsValid)
             {
                 contactMessage.Id = Guid.NewGuid();
-                _context.Add(contactMessage);
-                await _context.SaveChangesAsync();
+                _unitOfWork.ContactMessages.Add(contactMessage);
+                await _unitOfWork.CompleteAsync();
                 return RedirectToAction(nameof(Index));
             }
             return View(contactMessage);
@@ -74,7 +75,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var contactMessage = await _context.ContactMessages.FindAsync(id);
+            var contactMessage = await _unitOfWork.ContactMessages.GetByIdAsync(id);
             if (contactMessage == null)
             {
                 return NotFound();
@@ -98,8 +99,8 @@ namespace ContentManagementSystem.Controllers
             {
                 try
                 {
-                    _context.Update(contactMessage);
-                    await _context.SaveChangesAsync();
+                    _unitOfWork.ContactMessages.Update(contactMessage);
+                    await _unitOfWork.CompleteAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -125,7 +126,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var contactMessage = await _context.ContactMessages
+            var contactMessage = await _unitOfWork.ContactMessages.AsQueryable()
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (contactMessage == null)
             {
@@ -140,19 +141,21 @@ namespace ContentManagementSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
-            var contactMessage = await _context.ContactMessages.FindAsync(id);
+            var contactMessage = await _unitOfWork.ContactMessages.GetByIdAsync(id);
             if (contactMessage != null)
             {
-                _context.ContactMessages.Remove(contactMessage);
+                _unitOfWork.ContactMessages.Remove(contactMessage);
             }
 
-            await _context.SaveChangesAsync();
+            await _unitOfWork.CompleteAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool ContactMessageExists(Guid id)
         {
-            return _context.ContactMessages.Any(e => e.Id == id);
+            return _unitOfWork.ContactMessages.Any(e => e.Id == id);
         }
     }
 }
+
+

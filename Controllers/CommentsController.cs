@@ -6,23 +6,26 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ContentManagementSystem.ApplicationCore.Entities;
+using ContentManagementSystem.ApplicationCore.Interfaces;
 using ContentManagementSystem.DataLayer;
 
 namespace ContentManagementSystem.Controllers
 {
     public class CommentsController : Controller
     {
-        private readonly ContentManageDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ContentManageIdentityDbContext _identityContext;
 
-        public CommentsController(ContentManageDbContext context)
+        public CommentsController(IUnitOfWork unitOfWork, ContentManageIdentityDbContext identityContext)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
+            _identityContext = identityContext;
         }
 
         // GET: Comments
         public async Task<IActionResult> Index()
         {
-            var contentManageDbContext = _context.Comments.Include(c => c.Post).Include(c => c.User);
+            var contentManageDbContext = _unitOfWork.Comments.AsQueryable().Include(c => c.Post).Include(c => c.User);
             return View(await contentManageDbContext.ToListAsync());
         }
 
@@ -34,7 +37,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var comment = await _context.Comments
+            var comment = await _unitOfWork.Comments.AsQueryable()
                 .Include(c => c.Post)
                 .Include(c => c.User)
                 .FirstOrDefaultAsync(m => m.Id == id);
@@ -49,8 +52,8 @@ namespace ContentManagementSystem.Controllers
         // GET: Comments/Create
         public IActionResult Create()
         {
-            ViewData["PostId"] = new SelectList(_context.Posts, "Id", "Content");
-            ViewData["UserId"] = new SelectList(_context.Users, "Id", "Email");
+            ViewData["PostId"] = new SelectList(_unitOfWork.Posts.AsQueryable(), "Id", "Content");
+            ViewData["UserId"] = new SelectList(_identityContext.Users, "Id", "Email");
             return View();
         }
 
@@ -63,12 +66,12 @@ namespace ContentManagementSystem.Controllers
         {
             if (ModelState.IsValid)
             {
-                _context.Add(comment);
-                await _context.SaveChangesAsync();
+                _unitOfWork.Comments.Add(comment);
+                await _unitOfWork.CompleteAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["PostId"] = new SelectList(_context.Posts, "Id", "Content", comment.PostId);
-            ViewData["UserId"] = new SelectList(_context.Users, "Id", "Email", comment.UserId);
+            ViewData["PostId"] = new SelectList(_unitOfWork.Posts.AsQueryable(), "Id", "Content", comment.PostId);
+            ViewData["UserId"] = new SelectList(_identityContext.Users, "Id", "Email", comment.UserId);
             return View(comment);
         }
 
@@ -80,13 +83,13 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var comment = await _context.Comments.FindAsync(id);
+            var comment = await _unitOfWork.Comments.GetByIdAsync(id);
             if (comment == null)
             {
                 return NotFound();
             }
-            ViewData["PostId"] = new SelectList(_context.Posts, "Id", "Content", comment.PostId);
-            ViewData["UserId"] = new SelectList(_context.Users, "Id", "Email", comment.UserId);
+            ViewData["PostId"] = new SelectList(_unitOfWork.Posts.AsQueryable(), "Id", "Content", comment.PostId);
+            ViewData["UserId"] = new SelectList(_identityContext.Users, "Id", "Email", comment.UserId);
             return View(comment);
         }
 
@@ -106,8 +109,8 @@ namespace ContentManagementSystem.Controllers
             {
                 try
                 {
-                    _context.Update(comment);
-                    await _context.SaveChangesAsync();
+                    _unitOfWork.Comments.Update(comment);
+                    await _unitOfWork.CompleteAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -122,8 +125,8 @@ namespace ContentManagementSystem.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["PostId"] = new SelectList(_context.Posts, "Id", "Content", comment.PostId);
-            ViewData["UserId"] = new SelectList(_context.Users, "Id", "Email", comment.UserId);
+            ViewData["PostId"] = new SelectList(_unitOfWork.Posts.AsQueryable(), "Id", "Content", comment.PostId);
+            ViewData["UserId"] = new SelectList(_identityContext.Users, "Id", "Email", comment.UserId);
             return View(comment);
         }
 
@@ -135,7 +138,7 @@ namespace ContentManagementSystem.Controllers
                 return NotFound();
             }
 
-            var comment = await _context.Comments
+            var comment = await _unitOfWork.Comments.AsQueryable()
                 .Include(c => c.Post)
                 .Include(c => c.User)
                 .FirstOrDefaultAsync(m => m.Id == id);
@@ -152,20 +155,23 @@ namespace ContentManagementSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
-            var comment = await _context.Comments.FindAsync(id);
+            var comment = await _unitOfWork.Comments.GetByIdAsync(id);
             if (comment != null)
             {
-                _context.Comments.Remove(comment);
+                _unitOfWork.Comments.Remove(comment);
             }
 
-            await _context.SaveChangesAsync();
+            await _unitOfWork.CompleteAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool CommentExists(Guid id)
         {
-            return _context.Comments.Any(e => e.Id == id);
+            return _unitOfWork.Comments.Any(e => e.Id == id);
         }
     }
 }
+
+
+
 
