@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="../ContentManagementSystem.API/ContentManagementSystem.API.csproj" />
+  <Project Path="../ContentManagementSystem.ApplicationCore/ContentManagementSystem.ApplicationCore.csproj" />
+  <Project Path="../ContentManagementSystem.Common/ContentManagementSystem.Common.csproj" />
+  <Project Path="../ContentManagementSystem.DataLayer/ContentManagementSystem.DataLayer.csproj" />
+  <Project Path="../ContentManagementSystem.Service/ContentManagementSystem.Service.csproj" />
+  <Project Path="ContentManagementSystem.csproj" />
+</Solution>
