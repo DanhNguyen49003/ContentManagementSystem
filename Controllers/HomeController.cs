@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using ContentManagementSystem.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 
 namespace ContentManagementSystem.Controllers
 {
+    [Authorize(Roles = "Admin,Editor,Author,Moderator,Subscriber")]
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
@@ -30,6 +32,8 @@ namespace ContentManagementSystem.Controllers
         }
     }
 }
+
+
 
 
 

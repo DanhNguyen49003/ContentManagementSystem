@@ -1,3 +1,4 @@
+﻿using ContentManagementSystem.ApplicationCore.Entities.Identity;
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 #nullable disable
@@ -16,13 +17,13 @@ namespace ContentManagementSystem.Areas.Identity.Pages.Account
 {
     public class LoginWith2faModel : PageModel
     {
-        private readonly SignInManager<IdentityUser> _signInManager;
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly SignInManager<ContentUser> _signInManager;
+        private readonly UserManager<ContentUser> _userManager;
         private readonly ILogger<LoginWith2faModel> _logger;
 
         public LoginWith2faModel(
-            SignInManager<IdentityUser> signInManager,
-            UserManager<IdentityUser> userManager,
+            SignInManager<ContentUser> signInManager,
+            UserManager<ContentUser> userManager,
             ILogger<LoginWith2faModel> logger)
         {
             _signInManager = signInManager;

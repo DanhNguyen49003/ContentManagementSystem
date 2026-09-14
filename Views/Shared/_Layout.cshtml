@@ -1,49 +1,287 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+@using Microsoft.AspNetCore.Identity
+@using ContentManagementSystem.ApplicationCore.Entities.Identity
+@inject SignInManager<ContentUser> SignInManager
+@inject UserManager<ContentUser> UserManager
+
+@{
+    var isSignedIn = SignInManager.IsSignedIn(User);
+    var isAdmin = User.IsInRole("Admin");
+    var isEditor = User.IsInRole("Editor");
+    var isAuthor = User.IsInRole("Author");
+    var isModerator = User.IsInRole("Moderator");
+    var isSubscriber = User.IsInRole("Subscriber");
+
+    ContentUser? currentUser = null;
+    string displayName = User.Identity?.Name ?? "User";
+    string userAvatar = "";
+
+    if (isSignedIn)
+    {
+        currentUser = await UserManager.GetUserAsync(User);
+        if (currentUser != null)
+        {
+            displayName = !string.IsNullOrWhiteSpace(currentUser.FullName) 
+                ? currentUser.FullName 
+                : (!string.IsNullOrWhiteSpace(currentUser.UserName) ? currentUser.UserName : (currentUser.Email ?? "User"));
+            userAvatar = currentUser.Avatar ?? "";
+        }
+    }
+
+    if (string.IsNullOrEmpty(userAvatar))
+    {
+        userAvatar = $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(displayName)}&background=2563eb&color=fff&bold=true";
+    }
+
+    string roleName = "Khách";
+    string roleBadgeClass = "bg-gray-100 text-gray-700";
+
+    if (isAdmin) { roleName = "Admin"; roleBadgeClass = "bg-rose-100 text-rose-700"; }
+    else if (isEditor) { roleName = "Editor"; roleBadgeClass = "bg-blue-100 text-blue-700"; }
+    else if (isAuthor) { roleName = "Author"; roleBadgeClass = "bg-purple-100 text-purple-700"; }
+    else if (isModerator) { roleName = "Moderator"; roleBadgeClass = "bg-amber-100 text-amber-700"; }
+    else if (isSubscriber) { roleName = "Member"; roleBadgeClass = "bg-emerald-100 text-emerald-700"; }
+}
+
+<!DOCTYPE html>
+<html lang="vi">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - ContentManagementSystem</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <title>@ViewData["Title"] - CMS Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="~/ContentManagementSystem.styles.css" asp-append-version="true" />
+    <style>
+        .sidebar-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.625rem 1rem; border-radius: 0.5rem; color: #4b5563; font-size: 0.875rem; font-weight: 500; transition: all 0.15s ease-in-out; }
+        .sidebar-link:hover { background-color: #eff6ff; color: #1d4ed8; }
+        .sidebar-link.active { background-color: #2563eb; color: #ffffff; }
+        .sidebar-link.active:hover { background-color: #1d4ed8; color: #ffffff; }
+        .sidebar-group-label { font-size: 0.75rem; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; padding: 0 1rem; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+    </style>
 </head>
-<body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">ContentManagementSystem</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
-                    </ul>
-                </div>
+<body class="bg-gray-100 min-h-screen flex">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r border-gray-200 flex flex-col min-h-screen fixed top-0 left-0 z-30">
+        <!-- Logo -->
+        <div class="flex items-center gap-3 px-6 py-5 border-b border-gray-100">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
+                </svg>
             </div>
+            <div>
+                <span class="font-bold text-gray-900 text-lg leading-none block">CMS Portal</span>
+                <span class="text-[10px] text-gray-400 font-medium mt-0.5 block uppercase tracking-wider">Hệ thống quản trị</span>
+            </div>
+        </div>
+
+        <!-- Navigation Menu with Role Visibility -->
+        <nav class="flex-1 px-3 py-4 overflow-y-auto">
+            <!-- Tổng quan -->
+            <p class="sidebar-group-label">Tổng quan</p>
+            <a asp-controller="Home" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+                Dashboard
+            </a>
+
+            <!-- Nội dung: Admin, Editor, Author, Moderator -->
+            @if (isAdmin || isEditor || isAuthor || isModerator)
+            {
+                <p class="sidebar-group-label">Nội dung</p>
+
+                @if (isAdmin || isEditor || isAuthor)
+                {
+                    <a asp-controller="Posts" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Posts" ? "active" : "")">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        Bài viết
+                    </a>
+                }
+
+                @if (isAdmin || isEditor)
+                {
+                    <a asp-controller="Categories" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Categories" ? "active" : "")">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
+                        Chuyên mục
+                    </a>
+                }
+
+                @if (isAdmin || isEditor || isAuthor)
+                {
+                    <a asp-controller="Tags" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Tags" ? "active" : "")">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" /></svg>
+                        Thẻ Tags
+                    </a>
+                }
+
+                @if (isAdmin || isEditor)
+                {
+                    <a asp-controller="Pages" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Pages" ? "active" : "")">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        Trang tĩnh
+                    </a>
+                }
+
+                @if (isAdmin || isModerator)
+                {
+                    <a asp-controller="Comments" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Comments" ? "active" : "")">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                        Bình luận
+                    </a>
+                }
+            }
+
+            <!-- Giao diện: Chỉ Admin -->
+            @if (isAdmin)
+            {
+                <p class="sidebar-group-label">Giao diện (Chỉ Admin)</p>
+                <a asp-controller="Menus" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Menus" ? "active" : "")">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                    Menu
+                </a>
+                <a asp-controller="MenuItems" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "MenuItems" ? "active" : "")">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></svg>
+                    Menu Items
+                </a>
+                <a asp-controller="Banners" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Banners" ? "active" : "")">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    Banners
+                </a>
+            }
+
+            <!-- Marketing & Tương tác -->
+            @if (isAdmin || isEditor || isModerator)
+            {
+                <p class="sidebar-group-label">Marketing & Tương tác</p>
+                @if (isAdmin || isEditor)
+                {
+                    <a asp-controller="Events" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Events" ? "active" : "")">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        Sự kiện
+                    </a>
+                    <a asp-controller="Partners" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Partners" ? "active" : "")">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0" /></svg>
+                        Đối tác
+                    </a>
+                }
+                @if (isAdmin || isModerator)
+                {
+                    <a asp-controller="Testimonials" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Testimonials" ? "active" : "")">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
+                        Đánh giá
+                    </a>
+                }
+            }
+
+            <!-- Hỗ trợ & Khách hàng -->
+            @if (isAdmin || isEditor || isModerator)
+            {
+                <p class="sidebar-group-label">Hỗ trợ & Khách hàng</p>
+                <a asp-controller="Faqs" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Faqs" ? "active" : "")">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    FAQ
+                </a>
+                @if (isAdmin || isModerator)
+                {
+                    <a asp-controller="ContactMessages" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "ContactMessages" ? "active" : "")">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                        Liên hệ
+                    </a>
+                    <a asp-controller="NewsletterSubscribers" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "NewsletterSubscribers" ? "active" : "")">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                        Newsletter
+                    </a>
+                }
+            }
+            <!-- Quản trị Hệ thống & Phân quyền: Chỉ Admin -->
+            @if (isAdmin)
+            {
+                <p class="sidebar-group-label">Hệ thống & Phân quyền</p>
+                <a asp-controller="Auth" asp-action="Users" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Auth" && ViewContext.RouteData.Values["action"]?.ToString() == "Users" ? "active" : "")">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                    Người dùng & Phân quyền
+                </a>
+                <a asp-controller="Auth" asp-action="Roles" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Auth" && ViewContext.RouteData.Values["action"]?.ToString() == "Roles" ? "active" : "")">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                    Danh sách Vai trò
+                </a>
+            }
         </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
+
+        <!-- User info / Login / Logout bottom -->
+        <div class="border-t border-gray-100 p-4 bg-gray-50/50">
+            @if (isSignedIn)
+            {
+                <div class="flex items-center justify-between gap-2">
+                    <a asp-controller="Auth" asp-action="Profile" class="flex items-center gap-2.5 min-w-0 hover:opacity-80 transition-opacity" title="Xem hồ sơ cá nhân">
+                        <img src="@userAvatar" alt="@displayName" class="w-9 h-9 rounded-full object-cover border border-gray-200 shadow-sm flex-shrink-0 bg-gray-100" onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name=@(Uri.EscapeDataString(displayName))&background=2563eb&color=fff&bold=true';" />
+                        <div class="min-w-0">
+                            <p class="text-xs font-semibold text-gray-900 truncate">@displayName</p>
+                            <span class="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md @roleBadgeClass">
+                                @roleName
+                            </span>
+                        </div>
+                    </a>
+                    <form asp-controller="Auth" asp-action="Logout" method="post">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Đăng xuất">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                        </button>
+                    </form>
+                </div>
+            }
+            else
+            {
+                <a asp-controller="Auth" asp-action="Login" class="flex items-center justify-center gap-2 w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+                    Đăng nhập
+                </a>
+            }
+        </div>
+    </aside>
+
+    <!-- Main content area -->
+    <div class="ml-64 flex-1 flex flex-col min-h-screen">
+        <!-- Top bar -->
+        <header class="bg-white border-b border-gray-200 px-8 py-3 flex items-center justify-between sticky top-0 z-20 shadow-sm">
+            <div class="flex items-center gap-3">
+                <h1 class="text-xl font-bold text-gray-800">@ViewData["Title"]</h1>
+                @if (isSignedIn)
+                {
+                    <span class="text-xs px-2.5 py-0.5 rounded-full font-semibold @roleBadgeClass">
+                        Vai trò: @roleName
+                    </span>
+                }
+            </div>
+            <div class="flex items-center gap-4">
+                <span class="text-xs text-gray-500 font-medium hidden sm:inline">@DateTime.Now.ToString("dd/MM/yyyy HH:mm")</span>
+                @if (isSignedIn)
+                {
+                    <span class="text-xs text-gray-300 hidden sm:inline">|</span>
+                    <a asp-controller="Auth" asp-action="Profile" class="flex items-center gap-2.5 px-2 py-1 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all group" title="Xem hồ sơ cá nhân">
+                        <img src="@userAvatar" alt="@displayName" class="w-8 h-8 rounded-full object-cover border border-gray-200 ring-2 ring-blue-500/20 group-hover:ring-blue-500 shadow-sm flex-shrink-0 bg-gray-100" onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name=@(Uri.EscapeDataString(displayName))&background=2563eb&color=fff&bold=true';" />
+                        <div class="text-left hidden md:block">
+                            <span class="text-xs text-gray-800 font-semibold block leading-tight group-hover:text-blue-600 transition-colors">@displayName</span>
+                            <span class="text-[10px] text-gray-400 block leading-none mt-0.5">@(User.Identity?.Name)</span>
+                        </div>
+                    </a>
+                }
+            </div>
+        </header>
+
+        <!-- Page content -->
+        <main class="flex-1 p-8">
             @RenderBody()
         </main>
+
+        <footer class="border-t border-gray-200 bg-white px-8 py-3.5 text-xs text-gray-400 text-center">
+            &copy; @DateTime.Now.Year CMS Portal - Phân quyền 5 vai trò (Admin, Editor, Author, Moderator, Subscriber)
+        </footer>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - ContentManagementSystem - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-        </div>
-    </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
+

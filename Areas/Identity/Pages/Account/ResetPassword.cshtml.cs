@@ -1,3 +1,4 @@
+﻿using ContentManagementSystem.ApplicationCore.Entities.Identity;
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 #nullable disable
@@ -16,9 +17,9 @@ namespace ContentManagementSystem.Areas.Identity.Pages.Account
 {
     public class ResetPasswordModel : PageModel
     {
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly UserManager<ContentUser> _userManager;
 
-        public ResetPasswordModel(UserManager<IdentityUser> userManager)
+        public ResetPasswordModel(UserManager<ContentUser> userManager)
         {
             _userManager = userManager;
         }

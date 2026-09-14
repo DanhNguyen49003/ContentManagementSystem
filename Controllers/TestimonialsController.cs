@@ -1,13 +1,15 @@
+using Microsoft.AspNetCore.Authorization;
 using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using ContentManagementSystem.ApplicationCore.DTOs;
-using ContentManagementSystem.ApplicationCore.Interfaces;
+using ContentManagementSystem.Service.Interface;
 
 
 namespace ContentManagementSystem.Controllers
 {
+    [Authorize(Roles = "Admin,Moderator")]
     public class TestimonialsController : Controller
     {
         private readonly ITestimonialService _service;
@@ -92,3 +94,5 @@ namespace ContentManagementSystem.Controllers
         }
     }
 }
+
+

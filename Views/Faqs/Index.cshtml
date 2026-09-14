@@ -1,56 +1,125 @@
 @model IEnumerable<ContentManagementSystem.ApplicationCore.DTOs.FaqDto>
-
 @{
-    Layout = null;
+    ViewData["Title"] = "Quản lý FAQ";
+    Layout = "_Layout";
 }
 
-<!DOCTYPE html>
+<div class="p-6">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">Quản lý FAQ</h1>
+            <p class="text-sm text-gray-500 mt-1">Danh sách các câu hỏi thường gặp</p>
+        </div>
+        <a asp-action="Create" asp-controller="Faqs"
+           class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg shadow transition-colors duration-150">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Thêm FAQ
+        </a>
+    </div>
 
-<html>
-<head>
-    <meta name="viewport" content="width=device-width" />
-    <title>Index</title>
-</head>
-<body>
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Question)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Answer)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.CreatedAt)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.Question)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Answer)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CreatedAt)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
-            </td>
-        </tr>
+    <!-- Search Box -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4">
+        <div class="relative max-w-sm">
+            <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                </svg>
+            </span>
+            <input type="text" id="searchInput" placeholder="Tìm kiếm câu hỏi..."
+                   class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-100" id="faqTable">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-8">#</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Câu hỏi</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-44">Ngày tạo</th>
+                    <th class="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-32">Hành động</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50" id="faqTableBody">
+                @if (Model != null && Model.Any())
+                {
+                    int index = 1;
+                    foreach (var item in Model)
+                    {
+                        <tr class="hover:bg-blue-50 transition-colors duration-100 faq-row">
+                            <td class="px-6 py-4 text-sm text-gray-400">@index</td>
+                            <td class="px-6 py-4">
+                                <p class="text-sm font-medium text-gray-800 faq-question">@item.Question</p>
+                                <p class="text-xs text-gray-400 mt-0.5 line-clamp-1">@item.Answer</p>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-500">
+                                @item.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <div class="inline-flex items-center gap-2">
+                                    <a asp-action="Edit" asp-controller="Faqs" asp-route-id="@item.Id"
+                                       class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-amber-50 text-amber-500 hover:bg-amber-100 transition-colors duration-150"
+                                       title="Chỉnh sửa">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                    </a>
+                                    <a asp-action="Delete" asp-controller="Faqs" asp-route-id="@item.Id"
+                                       class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors duration-150"
+                                       title="Xóa">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3m-10 0h14" />
+                                        </svg>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        index++;
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="4" class="px-6 py-16 text-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+                            </svg>
+                            <p class="text-sm text-gray-400">Chưa có câu hỏi nào. <a asp-action="Create" asp-controller="Faqs" class="text-blue-600 hover:underline">Thêm FAQ mới</a></p>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <!-- Footer Row Count -->
+        <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+            <p class="text-xs text-gray-500">
+                Tổng cộng: <span class="font-semibold text-gray-700" id="rowCount">@(Model?.Count() ?? 0)</span> câu hỏi
+            </p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const searchInput = document.getElementById('searchInput');
+        const rows = document.querySelectorAll('.faq-row');
+        const rowCount = document.getElementById('rowCount');
+
+        searchInput.addEventListener('input', function () {
+            const query = this.value.toLowerCase().trim();
+            let visible = 0;
+            rows.forEach(row => {
+                const question = row.querySelector('.faq-question')?.textContent.toLowerCase() ?? '';
+                const match = question.includes(query);
+                row.style.display = match ? '' : 'none';
+                if (match) visible++;
+            });
+            rowCount.textContent = visible;
+        });
+    </script>
 }
-    </tbody>
-</table>
-</body>
-</html>
-

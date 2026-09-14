@@ -1,3 +1,4 @@
+﻿using ContentManagementSystem.ApplicationCore.Entities.Identity;
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 #nullable disable
@@ -13,13 +14,13 @@ namespace ContentManagementSystem.Areas.Identity.Pages.Account.Manage
 {
     public class ResetAuthenticatorModel : PageModel
     {
-        private readonly UserManager<IdentityUser> _userManager;
-        private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly UserManager<ContentUser> _userManager;
+        private readonly SignInManager<ContentUser> _signInManager;
         private readonly ILogger<ResetAuthenticatorModel> _logger;
 
         public ResetAuthenticatorModel(
-            UserManager<IdentityUser> userManager,
-            SignInManager<IdentityUser> signInManager,
+            UserManager<ContentUser> userManager,
+            SignInManager<ContentUser> signInManager,
             ILogger<ResetAuthenticatorModel> logger)
         {
             _userManager = userManager;

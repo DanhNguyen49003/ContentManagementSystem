@@ -1,0 +1,85 @@
+@model ContentManagementSystem.ViewModels.Auth.AssignRoleViewModel
+@{
+    ViewData["Title"] = "Phân quyền người dùng";
+    Layout = "_Layout";
+}
+
+<div class="max-w-2xl mx-auto space-y-6">
+    <!-- Header -->
+    <div>
+        <h2 class="text-2xl font-bold text-gray-900 tracking-tight">Phân quyền tài khoản</h2>
+        <p class="text-sm text-gray-500 mt-1">Thay đổi vai trò và quyền hạn truy cập của người dùng trong hệ thống CMS</p>
+    </div>
+
+    <!-- User Information Card -->
+    <div class="bg-white border border-gray-200/80 rounded-2xl p-6 shadow-sm">
+        <div class="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
+            <div class="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-base flex-shrink-0">
+                @(Model.FullName?.Length > 0 ? Model.FullName.Substring(0, 1).ToUpper() : Model.Email.Substring(0, 1).ToUpper())
+            </div>
+            <div>
+                <h3 class="text-base font-bold text-gray-900">@(string.IsNullOrEmpty(Model.FullName) ? "Chưa đặt tên" : Model.FullName)</h3>
+                <p class="text-xs text-gray-400">@Model.Email</p>
+                <div class="mt-1 flex gap-1">
+                    <span class="text-[11px] text-gray-500">Vai trò hiện tại:</span>
+                    @foreach (var r in Model.CurrentRoles)
+                    {
+                        <span class="text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">@r</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <form asp-controller="Auth" asp-action="AssignRole" method="post" class="space-y-5">
+            @Html.AntiForgeryToken()
+            <input asp-for="UserId" type="hidden" />
+            <input asp-for="Email" type="hidden" />
+            <input asp-for="FullName" type="hidden" />
+
+            <div asp-validation-summary="ModelOnly" class="p-3 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 text-xs font-medium" role="alert"></div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">Chọn vai trò mới cho người dùng</label>
+                <div class="space-y-3">
+                    @foreach (var role in Model.AvailableRoles)
+                    {
+                        var isChecked = role.Equals(Model.SelectedRole, StringComparison.OrdinalIgnoreCase);
+                        var roleDesc = role switch
+                        {
+                            "Admin" => "Toàn quyền quản trị: Quản lý người dùng, phân quyền vai trò, bài viết, menu, banner, cài đặt bảo mật.",
+                            "Editor" => "Biên tập viên: Quản lý toàn bộ bài viết, chuyên mục, trang tĩnh, duyệt và xuất bản nội dung.",
+                            "Author" => "Tác giả: Tạo và chỉnh sửa bài viết của chính mình, gửi bài chờ kiểm duyệt.",
+                            "Moderator" => "Kiểm duyệt viên: Quản lý bình luận, giải đáp FAQ, trả lời liên hệ và phản hồi độc giả.",
+                            _ => "Độc giả thành viên: Đọc bài viết, đăng bình luận và nhận bản tin thông báo."
+                        };
+
+                        <label class="flex items-start gap-3 p-4 border rounded-xl cursor-pointer transition-all hover:bg-gray-50/80 @(isChecked ? "border-blue-500 bg-blue-50/20 ring-1 ring-blue-500/30" : "border-gray-200")">
+                            <input type="radio" asp-for="SelectedRole" value="@role" class="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500" />
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-bold text-gray-900">@role</span>
+                                    @if (role == "Admin")
+                                    {
+                                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-700">Cao nhất</span>
+                                    }
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1 leading-relaxed">@roleDesc</p>
+                            </div>
+                        </label>
+                    }
+                </div>
+                <span asp-validation-for="SelectedRole" class="text-xs text-rose-500 mt-1 block"></span>
+            </div>
+
+            <div class="pt-4 border-t border-gray-100 flex items-center justify-between">
+                <a asp-controller="Auth" asp-action="Users" class="text-xs font-semibold text-gray-500 hover:text-gray-800 transition-colors">
+                    &larr; Quay lại danh sách Người dùng
+                </a>
+                <button type="submit" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-500/20 transition-all">
+                    Cập nhật vai trò
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+

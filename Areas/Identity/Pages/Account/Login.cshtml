@@ -1,83 +1,105 @@
-﻿@page
+@page
 @model LoginModel
 
 @{
-    ViewData["Title"] = "Log in";
+    ViewData["Title"] = "Đăng nhập";
 }
 
-<h1>@ViewData["Title"]</h1>
-<div class="row">
-    <div class="col-md-4">
-        <section>
-            <form id="account" method="post">
-                <h2>Use a local account to log in.</h2>
-                <hr />
-                <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
-                <div class="form-floating mb-3">
-                    <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                    <label asp-for="Input.Email" class="form-label">Email</label>
-                    <span asp-validation-for="Input.Email" class="text-danger"></span>
-                </div>
-                <div class="form-floating mb-3">
-                    <input asp-for="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
-                    <label asp-for="Input.Password" class="form-label">Password</label>
-                    <span asp-validation-for="Input.Password" class="text-danger"></span>
-                </div>
-                <div class="checkbox mb-3">
-                    <label asp-for="Input.RememberMe" class="form-label">
-                        <input class="form-check-input" asp-for="Input.RememberMe" />
-                        @Html.DisplayNameFor(m => m.Input.RememberMe)
-                    </label>
-                </div>
-                <div>
-                    <button id="login-submit" type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
-                </div>
-                <div>
-                    <p>
-                        <a id="forgot-password" asp-page="./ForgotPassword">Forgot your password?</a>
-                    </p>
-                    <p>
-                        <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Register as a new user</a>
-                    </p>
-                    <p>
-                        <a id="resend-confirmation" asp-page="./ResendEmailConfirmation">Resend email confirmation</a>
-                    </p>
-                </div>
-            </form>
-        </section>
+<div class="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 p-8 sm:p-10">
+    <!-- Header with Brand Logo -->
+    <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-500/30 mb-4">
+            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
+            </svg>
+        </div>
+        <h1 class="text-2xl font-black text-slate-800 tracking-tight">CMS Portal</h1>
+        <p class="text-xs text-slate-400 mt-1 font-medium">Đăng nhập vào hệ thống quản lý nội dung</p>
     </div>
-    <div class="col-md-6 col-md-offset-2">
-        <section>
-            <h3>Use another service to log in.</h3>
-            <hr />
-            @{
-                if ((Model.ExternalLogins?.Count ?? 0) == 0)
-                {
-                    <div>
-                        <p>
-                            There are no external authentication services configured. See this <a href="https://go.microsoft.com/fwlink/?LinkID=532715">article
-                            about setting up this ASP.NET application to support logging in via external services</a>.
-                        </p>
-                    </div>
-                }
-                else
-                {
-                    <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="form-horizontal">
-                        <div>
-                            <p>
-                                @foreach (var provider in Model.ExternalLogins!)
-                                {
-                                    <button type="submit" class="btn btn-primary" name="provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">@provider.DisplayName</button>
-                                }
-                            </p>
-                        </div>
-                    </form>
-                }
-            }
-        </section>
+
+    <!-- Login Form -->
+    <form id="account" method="post" class="space-y-5">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="p-4 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 text-xs font-medium" role="alert"></div>
+
+        <!-- Email Field -->
+        <div>
+            <label asp-for="Input.Email" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Email tài khoản</label>
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" /></svg>
+                </div>
+                <input asp-for="Input.Email" id="loginEmail" class="block w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all placeholder:text-slate-400 text-slate-800" placeholder="admin@cms.com" autocomplete="username" required />
+            </div>
+            <span asp-validation-for="Input.Email" class="text-xs text-rose-500 mt-1 block"></span>
+        </div>
+
+        <!-- Password Field -->
+        <div>
+            <div class="flex items-center justify-between mb-2">
+                <label asp-for="Input.Password" class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Mật khẩu</label>
+                <a asp-page="./ForgotPassword" class="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline">Quên mật khẩu?</a>
+            </div>
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                </div>
+                <input asp-for="Input.Password" id="loginPassword" type="password" class="block w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all placeholder:text-slate-400 text-slate-800" placeholder="••••••••" autocomplete="current-password" required />
+            </div>
+            <span asp-validation-for="Input.Password" class="text-xs text-rose-500 mt-1 block"></span>
+        </div>
+
+        <!-- Remember Me Toggle -->
+        <div class="flex items-center justify-between pt-1">
+            <label asp-for="Input.RememberMe" class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input asp-for="Input.RememberMe" type="checkbox" class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500" />
+                <span class="text-xs font-medium text-slate-600">Ghi nhớ đăng nhập</span>
+            </label>
+        </div>
+
+        <!-- Submit Button -->
+        <button id="login-submit" type="submit" class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white text-sm font-bold rounded-xl shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2">
+            <span>Đăng nhập ngay</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </button>
+    </form>
+
+    <!-- Quick test account buttons -->
+    <div class="mt-6 pt-5 border-t border-slate-100">
+        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center mb-2">Tài khoản mẫu thử nghiệm:</p>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+            <button type="button" onclick="fillCreds('admin@cms.com', 'Admin@123')" class="p-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-medium text-center transition-colors">
+                👑 Admin
+            </button>
+            <button type="button" onclick="fillCreds('editor@cms.com', 'Editor@123')" class="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium text-center transition-colors">
+                ✍️ Editor
+            </button>
+            <button type="button" onclick="fillCreds('author@cms.com', 'Author@123')" class="p-2 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 font-medium text-center transition-colors">
+                📝 Author
+            </button>
+            <button type="button" onclick="fillCreds('moderator@cms.com', 'Moderator@123')" class="p-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 font-medium text-center transition-colors">
+                🛡️ Moderator
+            </button>
+        </div>
+    </div>
+
+    <!-- Register Link -->
+    <div class="text-center mt-6">
+        <p class="text-xs text-slate-500">
+            Chưa có tài khoản? 
+            <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" class="font-bold text-blue-600 hover:text-blue-700 hover:underline">Đăng ký thành viên</a>
+        </p>
     </div>
 </div>
+
+<script>
+    function fillCreds(email, pass) {
+        document.getElementById('loginEmail').value = email;
+        document.getElementById('loginPassword').value = pass;
+    }
+</script>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
+

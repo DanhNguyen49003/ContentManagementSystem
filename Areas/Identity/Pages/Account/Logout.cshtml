@@ -1,21 +1,40 @@
-﻿@page
+@page
 @model LogoutModel
 @{
-    ViewData["Title"] = "Log out";
+    ViewData["Title"] = "Đăng xuất";
 }
 
-<header>
-    <h1>@ViewData["Title"]</h1>
+<div class="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 p-8 sm:p-10 text-center">
     @{
         if (User.Identity?.IsAuthenticated ?? false)
         {
-            <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/", new { area = "" })" method="post">
-                <button type="submit" class="nav-link btn btn-link text-dark">Click here to Logout</button>
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 mb-4">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+            </div>
+            <h1 class="text-2xl font-black text-slate-800 tracking-tight">Xác nhận Đăng xuất</h1>
+            <p class="text-xs text-slate-500 mt-2 mb-6">Bạn có chắc chắn muốn kết thúc phiên làm việc hiện tại không?</p>
+            
+            <form asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/", new { area = "" })" method="post" class="space-y-3">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="w-full py-3 px-4 bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-rose-500/25 transition-all">
+                    Đăng xuất ngay
+                </button>
+                <a asp-controller="Home" asp-action="Index" class="inline-block text-xs font-semibold text-slate-500 hover:text-slate-800 pt-2">
+                    &larr; Hủy và quay lại Dashboard
+                </a>
             </form>
         }
         else
         {
-            <p>You have successfully logged out of the application.</p>
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 mb-4">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+            <h1 class="text-2xl font-black text-slate-800 tracking-tight">Đã đăng xuất</h1>
+            <p class="text-xs text-slate-500 mt-2 mb-6">Bạn đã đăng xuất thành công khỏi hệ thống CMS Portal.</p>
+            <a asp-page="./Login" class="inline-flex items-center justify-center gap-2 w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-blue-500/25 transition-all">
+                Đăng nhập lại
+            </a>
         }
     }
-</header>
+</div>
+

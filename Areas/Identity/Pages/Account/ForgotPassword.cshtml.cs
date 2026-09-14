@@ -1,3 +1,4 @@
+using ContentManagementSystem.ApplicationCore.Entities.Identity;
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 #nullable disable
@@ -18,10 +19,10 @@ namespace ContentManagementSystem.Areas.Identity.Pages.Account
 {
     public class ForgotPasswordModel : PageModel
     {
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly UserManager<ContentUser> _userManager;
         private readonly IEmailSender _emailSender;
 
-        public ForgotPasswordModel(UserManager<IdentityUser> userManager, IEmailSender emailSender)
+        public ForgotPasswordModel(UserManager<ContentUser> userManager, IEmailSender emailSender)
         {
             _userManager = userManager;
             _emailSender = emailSender;
@@ -54,9 +55,9 @@ namespace ContentManagementSystem.Areas.Identity.Pages.Account
             if (ModelState.IsValid)
             {
                 var user = await _userManager.FindByEmailAsync(Input.Email);
-                if (user == null || !(await _userManager.IsEmailConfirmedAsync(user)))
+                if (user == null)
                 {
-                    // Don't reveal that the user does not exist or is not confirmed
+                    // Don't reveal that the user does not exist
                     return RedirectToPage("./ForgotPasswordConfirmation");
                 }
 
@@ -70,10 +71,14 @@ namespace ContentManagementSystem.Areas.Identity.Pages.Account
                     values: new { area = "Identity", code },
                     protocol: Request.Scheme);
 
+                var emailBody = ContentManagementSystem.Services.EmailTemplateHelper.GenerateResetPasswordEmail(
+                    callbackUrl, 
+                    user.FullName ?? user.UserName ?? "");
+
                 await _emailSender.SendEmailAsync(
                     Input.Email,
-                    "Reset Password",
-                    $"Please reset your password by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+                    "Yêu cầu đặt lại mật khẩu - CMS Portal",
+                    emailBody);
 
                 return RedirectToPage("./ForgotPasswordConfirmation");
             }

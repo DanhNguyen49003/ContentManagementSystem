@@ -1,42 +1,53 @@
 @model ContentManagementSystem.ApplicationCore.DTOs.CommentDto
 
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Chi tiết Bình luận";
+    Layout = "_Layout";
 }
 
-<h1>Details</h1>
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">Chi tiết Bình luận</h2>
+        </div>
+        <div class="flex items-center gap-2">
+            <a asp-action="Index" class="text-sm font-medium text-gray-600 hover:text-gray-900 bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm transition-all">
+                &larr; Quay lại
+            </a>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="inline-flex items-center gap-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-xl shadow-sm transition-all">
+                Kiểm duyệt
+            </a>
+        </div>
+    </div>
 
-<div>
-    <h4>Comment</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Content)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Content)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.CreatedAt)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.CreatedAt)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.IsApproved)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.IsApproved)
-        </dd>
-        
-        
-        
-        
-    </dl>
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8 space-y-4">
+        <div>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-1">Trạng thái duyệt:</span>
+            @if (Model.IsApproved)
+            {
+                <span class="px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-semibold">Đã duyệt</span>
+            }
+            else
+            {
+                <span class="px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-xs font-semibold">Chờ duyệt</span>
+            }
+        </div>
+        <div>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-1">Nội dung bình luận:</span>
+            <div class="p-4 bg-gray-50 rounded-xl text-gray-800 text-sm whitespace-pre-line leading-relaxed">
+                @Model.Content
+            </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4 text-xs text-gray-500 pt-2">
+            <div>
+                <span class="font-semibold text-gray-400 block">Thời gian:</span>
+                @Model.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss")
+            </div>
+            <div>
+                <span class="font-semibold text-gray-400 block">ID Bài viết:</span>
+                <code class="text-gray-700">@Model.PostId</code>
+            </div>
+        </div>
+    </div>
 </div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
-</div>
-
 

@@ -1,37 +1,40 @@
 @model ContentManagementSystem.ApplicationCore.DTOs.CategoryDto
 
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Chi tiết chuyên mục";
+    Layout = "_Layout";
 }
 
-<h1>Details</h1>
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">Chi tiết chuyên mục</h2>
+            <p class="text-sm text-gray-500 mt-1">Thông tin chi tiết về chuyên mục.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a asp-action="Index" class="text-sm font-medium text-gray-600 hover:text-gray-900 bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm transition-all">
+                &larr; Quay lại
+            </a>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="inline-flex items-center gap-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-xl shadow-sm transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                Chỉnh sửa
+            </a>
+        </div>
+    </div>
 
-<div>
-    <h4>Category</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Name)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Name)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Slug)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Slug)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Description)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Description)
-        </dd>
-    </dl>
-</div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8 space-y-4">
+        <div>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-1">Tên chuyên mục:</span>
+            <p class="text-xl font-bold text-gray-900">@Model.Name</p>
+        </div>
+        <div>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-1">Đường dẫn thân thiện (Slug):</span>
+            <code class="px-2.5 py-1 bg-gray-100 text-gray-600 rounded-md text-sm">@Model.Slug</code>
+        </div>
+        <div>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-1">Mô tả:</span>
+            <p class="text-gray-700 text-sm">@(!string.IsNullOrEmpty(Model.Description) ? Model.Description : "Không có mô tả.")</p>
+        </div>
+    </div>
 </div>
 

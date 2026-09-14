@@ -1,22 +1,20 @@
+using Microsoft.AspNetCore.Authorization;
 using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using ContentManagementSystem.ApplicationCore.DTOs;
-using ContentManagementSystem.ApplicationCore.Interfaces;
-
+using ContentManagementSystem.Service.Interface;
 
 namespace ContentManagementSystem.Controllers
 {
+    [Authorize(Roles = "Admin,Moderator")]
     public class ContactMessagesController : Controller
     {
         private readonly IContactMessageService _service;
-        
 
         public ContactMessagesController(IContactMessageService service)
         {
             _service = service;
-            
         }
 
         public async Task<IActionResult> Index()
@@ -29,49 +27,6 @@ namespace ContentManagementSystem.Controllers
             if (id == null) return NotFound();
             var dto = await _service.GetByIdAsync(id.Value);
             if (dto == null) return NotFound();
-            return View(dto);
-        }
-
-        public IActionResult Create()
-        {
-            
-            return View();
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(ContactMessageDto dto)
-        {
-            if (ModelState.IsValid)
-            {
-                await _service.CreateAsync(dto);
-                return RedirectToAction(nameof(Index));
-            }
-            
-            return View(dto);
-        }
-
-        public async Task<IActionResult> Edit(Guid? id)
-        {
-            if (id == null) return NotFound();
-            var dto = await _service.GetByIdAsync(id.Value);
-            if (dto == null) return NotFound();
-            
-            return View(dto);
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Guid id, ContactMessageDto dto)
-        {
-            if (id != dto.Id) return NotFound();
-
-            if (ModelState.IsValid)
-            {
-                await _service.UpdateAsync(dto);
-                return RedirectToAction(nameof(Index));
-            }
-            
             return View(dto);
         }
 
@@ -92,3 +47,4 @@ namespace ContentManagementSystem.Controllers
         }
     }
 }
+

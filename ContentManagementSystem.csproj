@@ -4,6 +4,7 @@
     <ProjectReference Include="..\ContentManagementSystem.ApplicationCore\ContentManagementSystem.ApplicationCore.csproj" />
     <ProjectReference Include="..\ContentManagementSystem.DataLayer\ContentManagementSystem.DataLayer.csproj" />
     <ProjectReference Include="..\ContentManagementSystem.Common\ContentManagementSystem.Common.csproj" />
+    <ProjectReference Include="..\ContentManagementSystem.Service\ContentManagementSystem.Service.csproj" />
   </ItemGroup>
 
   <ItemGroup>

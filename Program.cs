@@ -1,52 +1,82 @@
 using Microsoft.EntityFrameworkCore;
 using ContentManagementSystem.DataLayer;
 using Microsoft.AspNetCore.Identity;
+using ContentManagementSystem.ApplicationCore.Entities.Identity;
+using ContentManagementSystem.Service.Interface;
+using ContentManagementSystem.Service.Implementations;
+using ContentManagementSystem.Seeders;
+
+using Microsoft.AspNetCore.Identity.UI.Services;
+using ContentManagementSystem.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddRazorPages();
 
-// Services
-builder.Services.AddScoped<ContentManagementSystem.ApplicationCore.Interfaces.IAuditLogService, ContentManagementSystem.Services.AuditLogService>();
-builder.Services.AddScoped<ContentManagementSystem.ApplicationCore.Interfaces.IBannerService, ContentManagementSystem.Services.BannerService>();
-builder.Services.AddScoped<ContentManagementSystem.ApplicationCore.Interfaces.ICategoryService, ContentManagementSystem.Services.CategoryService>();
-builder.Services.AddScoped<ContentManagementSystem.ApplicationCore.Interfaces.ICommentService, ContentManagementSystem.Services.CommentService>();
-builder.Services.AddScoped<ContentManagementSystem.ApplicationCore.Interfaces.IContactMessageService, ContentManagementSystem.Services.ContactMessageService>();
-builder.Services.AddScoped<ContentManagementSystem.ApplicationCore.Interfaces.IEventService, ContentManagementSystem.Services.EventService>();
-builder.Services.AddScoped<ContentManagementSystem.ApplicationCore.Interfaces.IFaqService, ContentManagementSystem.Services.FaqService>();
-builder.Services.AddScoped<ContentManagementSystem.ApplicationCore.Interfaces.IMediaAssetService, ContentManagementSystem.Services.MediaAssetService>();
-builder.Services.AddScoped<ContentManagementSystem.ApplicationCore.Interfaces.IMenuService, ContentManagementSystem.Services.MenuService>();
-builder.Services.AddScoped<ContentManagementSystem.ApplicationCore.Interfaces.IMenuItemService, ContentManagementSystem.Services.MenuItemService>();
-builder.Services.AddScoped<ContentManagementSystem.ApplicationCore.Interfaces.INewsletterSubscriberService, ContentManagementSystem.Services.NewsletterSubscriberService>();
-builder.Services.AddScoped<ContentManagementSystem.ApplicationCore.Interfaces.IPageService, ContentManagementSystem.Services.PageService>();
-builder.Services.AddScoped<ContentManagementSystem.ApplicationCore.Interfaces.IPartnerService, ContentManagementSystem.Services.PartnerService>();
-builder.Services.AddScoped<ContentManagementSystem.ApplicationCore.Interfaces.ISettingService, ContentManagementSystem.Services.SettingService>();
-builder.Services.AddScoped<ContentManagementSystem.ApplicationCore.Interfaces.ITagService, ContentManagementSystem.Services.TagService>();
-builder.Services.AddScoped<ContentManagementSystem.ApplicationCore.Interfaces.ITestimonialService, ContentManagementSystem.Services.TestimonialService>();
+// ===== Email Sender Configuration =====
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+builder.Services.AddTransient<IEmailSender, EmailSender>();
 
+// ===== HttpClient & API Client Configuration =====
+builder.Services.AddHttpClient<ContentManagementSystem.Services.ApiClients.IApiClient, ContentManagementSystem.Services.ApiClients.ApiClient>();
 
-builder.Services.AddScoped<ContentManagementSystem.ApplicationCore.Interfaces.IPostService, ContentManagementSystem.Services.PostService>();
+// ===== DI: Service Layer (Gọi 100% qua RESTful Web API) =====
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+builder.Services.AddScoped<IBannerService, ContentManagementSystem.Services.ApiClients.BannerApiService>();
+builder.Services.AddScoped<ICategoryService, ContentManagementSystem.Services.ApiClients.CategoryApiService>();
+builder.Services.AddScoped<ICommentService, ContentManagementSystem.Services.ApiClients.CommentApiService>();
+builder.Services.AddScoped<IContactMessageService, ContentManagementSystem.Services.ApiClients.ContactMessageApiService>();
+builder.Services.AddScoped<IEventService, ContentManagementSystem.Services.ApiClients.EventApiService>();
+builder.Services.AddScoped<IFaqService, ContentManagementSystem.Services.ApiClients.FaqApiService>();
+builder.Services.AddScoped<IMediaAssetService, MediaAssetService>();
+builder.Services.AddScoped<IMenuService, ContentManagementSystem.Services.ApiClients.MenuApiService>();
+builder.Services.AddScoped<IMenuItemService, ContentManagementSystem.Services.ApiClients.MenuItemApiService>();
+builder.Services.AddScoped<INewsletterSubscriberService, ContentManagementSystem.Services.ApiClients.NewsletterSubscriberApiService>();
+builder.Services.AddScoped<IPageService, ContentManagementSystem.Services.ApiClients.PageApiService>();
+builder.Services.AddScoped<IPartnerService, ContentManagementSystem.Services.ApiClients.PartnerApiService>();
+builder.Services.AddScoped<IPostService, ContentManagementSystem.Services.ApiClients.PostApiService>();
+builder.Services.AddScoped<ISettingService, SettingService>();
+builder.Services.AddScoped<ITagService, ContentManagementSystem.Services.ApiClients.TagApiService>();
+builder.Services.AddScoped<ITestimonialService, ContentManagementSystem.Services.ApiClients.TestimonialApiService>();
 
-// Dependency Injection
-
+// ===== DbContext =====
 builder.Services.AddDbContext<ContentManageDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("ContentConnection")));
 
-builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true).AddEntityFrameworkStores<ContentManageIdentityDbContext>();
-
 builder.Services.AddDbContext<ContentManageIdentityDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("ContentIdentityConnection") ?? builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("ContentIdentityConnection") 
+        ?? builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// ===== Identity Configuration with ContentUser & ContentRole =====
+builder.Services.AddIdentity<ContentUser, ContentRole>(options =>
+{
+    options.SignIn.RequireConfirmedAccount = false;
+    options.Password.RequireDigit = false;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequireUppercase = false;
+    options.Password.RequiredLength = 6;
+})
+.AddEntityFrameworkStores<ContentManageIdentityDbContext>()
+.AddDefaultTokenProviders()
+.AddDefaultUI();
 
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/Auth/Login";
+    options.AccessDeniedPath = "/Auth/AccessDenied";
+});
 
 var app = builder.Build();
+
+// Seed Identity Roles and default Accounts
+await IdentityDataSeeder.SeedAsync(app);
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
@@ -55,18 +85,14 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
+app.MapRazorPages();
+
 app.Run();
-
-
-
-
-
-
-
 

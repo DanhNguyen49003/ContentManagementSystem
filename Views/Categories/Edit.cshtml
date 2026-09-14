@@ -1,42 +1,54 @@
 @model ContentManagementSystem.ApplicationCore.DTOs.CategoryDto
 
 @{
-    ViewData["Title"] = "Edit";
+    ViewData["Title"] = "Chỉnh sửa chuyên mục";
+    Layout = "_Layout";
 }
 
-<h1>Edit</h1>
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">Chỉnh sửa chuyên mục</h2>
+            <p class="text-sm text-gray-500 mt-1">Cập nhật thông tin và đường dẫn chuyên mục.</p>
+        </div>
+        <a asp-action="Index" class="text-sm font-medium text-gray-600 hover:text-gray-900 bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm transition-all">
+            &larr; Quay lại
+        </a>
+    </div>
 
-<h4>Category</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Edit">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
+        <form asp-action="Edit" method="post" class="space-y-5">
+            @Html.AntiForgeryToken()
             <input type="hidden" asp-for="Id" />
-            <div class="form-group">
-                <label asp-for="Name" class="control-label"></label>
-                <input asp-for="Name" class="form-control" />
-                <span asp-validation-for="Name" class="text-danger"></span>
+            <div asp-validation-summary="ModelOnly" class="p-4 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 text-sm"></div>
+
+            <div>
+                <label asp-for="Name" class="block text-sm font-semibold text-gray-700 mb-1">Tên chuyên mục <span class="text-rose-500">*</span></label>
+                <input asp-for="Name" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+                <span asp-validation-for="Name" class="text-xs text-rose-500 mt-1 block"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="Slug" class="control-label"></label>
-                <input asp-for="Slug" class="form-control" />
-                <span asp-validation-for="Slug" class="text-danger"></span>
+
+            <div>
+                <label asp-for="Slug" class="block text-sm font-semibold text-gray-700 mb-1">Đường dẫn thân thiện (Slug)</label>
+                <input asp-for="Slug" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                <span asp-validation-for="Slug" class="text-xs text-rose-500 mt-1 block"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="Description" class="control-label"></label>
-                <input asp-for="Description" class="form-control" />
-                <span asp-validation-for="Description" class="text-danger"></span>
+
+            <div>
+                <label asp-for="Description" class="block text-sm font-semibold text-gray-700 mb-1">Mô tả ngắn</label>
+                <textarea asp-for="Description" rows="3" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+                <span asp-validation-for="Description" class="text-xs text-rose-500 mt-1 block"></span>
             </div>
-            <div class="form-group">
-                <input type="submit" value="Save" class="btn btn-primary" />
+
+            <div class="pt-4 border-t border-gray-100 flex items-center justify-end gap-3">
+                <a asp-action="Index" class="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium transition-all">Hủy bỏ</a>
+                <button type="submit" class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-sm transition-all flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    Cập nhật
+                </button>
             </div>
         </form>
     </div>
-</div>
-
-<div>
-    <a asp-action="Index">Back to List</a>
 </div>
 
 @section Scripts {

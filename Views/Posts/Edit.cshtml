@@ -1,76 +1,97 @@
-﻿@model ContentManagementSystem.ApplicationCore.DTOs.PostDto
+@model ContentManagementSystem.ApplicationCore.DTOs.PostDto
 
 @{
-    ViewData["Title"] = "Edit";
+    ViewData["Title"] = "Chỉnh sửa bài viết";
+    Layout = "_Layout";
 }
 
-<h1>Edit</h1>
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">Chỉnh sửa bài viết</h2>
+            <p class="text-sm text-gray-500 mt-1">Cập nhật nội dung và thông tin xuất bản bài viết.</p>
+        </div>
+        <a asp-action="Index" class="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm transition-all">
+            &larr; Quay lại danh sách
+        </a>
+    </div>
 
-<h4>Post</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Edit">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <!-- Form Card -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
+        <form asp-action="Edit" method="post" class="space-y-6">
+            @Html.AntiForgeryToken()
             <input type="hidden" asp-for="Id" />
-            <div class="form-group">
-                <label asp-for="Title" class="control-label"></label>
-                <input asp-for="Title" class="form-control" />
-                <span asp-validation-for="Title" class="text-danger"></span>
+            <input type="hidden" asp-for="CreatedAt" />
+            <div asp-validation-summary="ModelOnly" class="p-4 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 text-sm"></div>
+
+            <div class="space-y-4">
+                <!-- Title -->
+                <div>
+                    <label asp-for="Title" class="block text-sm font-semibold text-gray-700 mb-1">Tiêu đề bài viết <span class="text-rose-500">*</span></label>
+                    <input asp-for="Title" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" required />
+                    <span asp-validation-for="Title" class="text-xs text-rose-500 mt-1 block"></span>
+                </div>
+
+                <!-- Slug -->
+                <div>
+                    <label asp-for="Slug" class="block text-sm font-semibold text-gray-700 mb-1">Đường dẫn thân thiện (Slug)</label>
+                    <input asp-for="Slug" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" />
+                    <p class="text-xs text-gray-400 mt-1">Đổi tiêu đề thì có thể để trống để cập nhật lại slug tự động.</p>
+                    <span asp-validation-for="Slug" class="text-xs text-rose-500 mt-1 block"></span>
+                </div>
+
+                <!-- Category & Author -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label asp-for="CategoryId" class="block text-sm font-semibold text-gray-700 mb-1">Chuyên mục <span class="text-rose-500">*</span></label>
+                        <select asp-for="CategoryId" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white" asp-items="ViewBag.CategoryId" required></select>
+                        <span asp-validation-for="CategoryId" class="text-xs text-rose-500 mt-1 block"></span>
+                    </div>
+
+                    <div>
+                        <label asp-for="AuthorId" class="block text-sm font-semibold text-gray-700 mb-1">Tác giả <span class="text-rose-500">*</span></label>
+                        <select asp-for="AuthorId" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white" asp-items="ViewBag.AuthorId" required></select>
+                        <span asp-validation-for="AuthorId" class="text-xs text-rose-500 mt-1 block"></span>
+                    </div>
+                </div>
+
+                <!-- Summary -->
+                <div>
+                    <label asp-for="Summary" class="block text-sm font-semibold text-gray-700 mb-1">Tóm tắt nội dung</label>
+                    <textarea asp-for="Summary" rows="3" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"></textarea>
+                    <span asp-validation-for="Summary" class="text-xs text-rose-500 mt-1 block"></span>
+                </div>
+
+                <!-- Content -->
+                <div>
+                    <label asp-for="Content" class="block text-sm font-semibold text-gray-700 mb-1">Nội dung chi tiết <span class="text-rose-500">*</span></label>
+                    <textarea asp-for="Content" rows="12" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sans transition-all" required></textarea>
+                    <span asp-validation-for="Content" class="text-xs text-rose-500 mt-1 block"></span>
+                </div>
+
+                <!-- IsPublished Toggle -->
+                <div class="pt-2">
+                    <label class="relative flex items-center gap-3 cursor-pointer">
+                        <input asp-for="IsPublished" type="checkbox" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
+                        <span class="text-sm font-medium text-gray-700 select-none">Xuất bản bài viết</span>
+                    </label>
+                </div>
             </div>
-            <div class="form-group">
-                <label asp-for="Slug" class="control-label"></label>
-                <input asp-for="Slug" class="form-control" />
-                <span asp-validation-for="Slug" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Content" class="control-label"></label>
-                <input asp-for="Content" class="form-control" />
-                <span asp-validation-for="Content" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Summary" class="control-label"></label>
-                <input asp-for="Summary" class="form-control" />
-                <span asp-validation-for="Summary" class="text-danger"></span>
-            </div>
-            <div class="form-group form-check">
-                <label class="form-check-label">
-                    <input class="form-check-input" asp-for="IsPublished" /> @Html.DisplayNameFor(model => model.IsPublished)
-                </label>
-            </div>
-            <div class="form-group">
-                <label asp-for="CreatedAt" class="control-label"></label>
-                <input asp-for="CreatedAt" class="form-control" />
-                <span asp-validation-for="CreatedAt" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="CreatedAt" class="control-label"></label>
-                <input asp-for="CreatedAt" class="form-control" />
-                <span asp-validation-for="CreatedAt" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="AuthorId" class="control-label"></label>
-                <select asp-for="AuthorId" class="form-control" asp-items="ViewBag.AuthorId"></select>
-                <span asp-validation-for="AuthorId" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="CategoryId" class="control-label"></label>
-                <select asp-for="CategoryId" class="form-control" asp-items="ViewBag.CategoryId"></select>
-                <span asp-validation-for="CategoryId" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Save" class="btn btn-primary" />
+
+            <!-- Action Buttons -->
+            <div class="pt-6 border-t border-gray-100 flex items-center justify-end gap-3">
+                <a asp-action="Index" class="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium transition-all">Hủy bỏ</a>
+                <button type="submit" class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-sm transition-all flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    Cập nhật thay đổi
+                </button>
             </div>
         </form>
     </div>
 </div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
-
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
 }
-
 

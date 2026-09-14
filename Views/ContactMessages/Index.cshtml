@@ -1,62 +1,74 @@
 @model IEnumerable<ContentManagementSystem.ApplicationCore.DTOs.ContactMessageDto>
 
 @{
-    Layout = null;
+    ViewData["Title"] = "Hộp thư liên hệ";
+    Layout = "_Layout";
 }
 
-<!DOCTYPE html>
+<div class="space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">Hộp thư liên hệ</h2>
+            <p class="text-sm text-gray-500 mt-1">Tin nhắn và yêu cầu liên hệ từ khách truy cập website.</p>
+        </div>
+    </div>
 
-<html>
-<head>
-    <meta name="viewport" content="width=device-width" />
-    <title>Index</title>
-</head>
-<body>
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Name)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Email)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Message)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.CreatedAt)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.Name)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Email)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Message)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CreatedAt)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
-            </td>
-        </tr>
-}
-    </tbody>
-</table>
-</body>
-</html>
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="p-5 border-b border-gray-100 flex justify-between items-center">
+            <span class="text-sm text-gray-500">Tổng cộng: <strong class="text-gray-800 font-semibold">@(Model?.Count() ?? 0)</strong> tin nhắn</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-50/75 text-gray-500 text-xs uppercase tracking-wider">
+                        <th class="px-6 py-3.5 font-semibold">Người gửi</th>
+                        <th class="px-6 py-3.5 font-semibold">Email</th>
+                        <th class="px-6 py-3.5 font-semibold">Nội dung tin nhắn</th>
+                        <th class="px-6 py-3.5 font-semibold">Thời gian</th>
+                        <th class="px-6 py-3.5 font-semibold text-right">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 text-sm">
+                    @if (Model != null && Model.Any())
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr class="hover:bg-gray-50/75 transition-colors">
+                                <td class="px-6 py-4 font-semibold text-gray-800 whitespace-nowrap">
+                                    @item.Name
+                                </td>
+                                <td class="px-6 py-4 text-gray-600 text-xs whitespace-nowrap">
+                                    <a href="mailto:@item.Email" class="text-blue-600 hover:underline">@item.Email</a>
+                                </td>
+                                <td class="px-6 py-4 text-gray-600 text-sm max-w-sm">
+                                    <p class="line-clamp-2">@item.Message</p>
+                                </td>
+                                <td class="px-6 py-4 text-gray-400 text-xs whitespace-nowrap">
+                                    @item.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                                </td>
+                                <td class="px-6 py-4 text-right whitespace-nowrap">
+                                    <div class="inline-flex items-center gap-1">
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="p-1.5 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-all" title="Xem chi tiết">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                        </a>
+                                        <a asp-action="Delete" asp-route-id="@item.Id" class="p-1.5 text-gray-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-all" title="Xóa">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center py-12 text-gray-400">Không có tin nhắn nào.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 

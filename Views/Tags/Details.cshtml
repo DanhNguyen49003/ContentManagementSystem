@@ -1,25 +1,36 @@
 @model ContentManagementSystem.ApplicationCore.DTOs.TagDto
 
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Chi tiết Thẻ Tag";
+    Layout = "_Layout";
 }
 
-<h1>Details</h1>
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">Chi tiết Thẻ Tag</h2>
+        </div>
+        <div class="flex items-center gap-2">
+            <a asp-action="Index" class="text-sm font-medium text-gray-600 hover:text-gray-900 bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm transition-all">
+                &larr; Quay lại
+            </a>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="inline-flex items-center gap-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-xl shadow-sm transition-all">
+                Chỉnh sửa
+            </a>
+        </div>
+    </div>
 
-<div>
-    <h4>Tag</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Name)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Name)
-        </dd>
-    </dl>
-</div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8 space-y-4">
+        <div>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-1">Tên Tag:</span>
+            <span class="inline-flex items-center px-3 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-base">
+                #@Model.Name
+            </span>
+        </div>
+        <div>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-1">Mã định danh (ID):</span>
+            <code class="text-xs font-mono text-gray-500 bg-gray-50 px-2 py-1 rounded">@Model.Id</code>
+        </div>
+    </div>
 </div>
 

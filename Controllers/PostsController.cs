@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -5,31 +6,44 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using ContentManagementSystem.ApplicationCore.Entities;
-using ContentManagementSystem.DataLayer;
-using ContentManagementSystem.ApplicationCore.Interfaces;
 using ContentManagementSystem.ApplicationCore.DTOs;
+using ContentManagementSystem.DataLayer;
+using ContentManagementSystem.Service.Interface;
 
 namespace ContentManagementSystem.Controllers
 {
+    [Authorize(Roles = "Admin,Editor,Author")]
     public class PostsController : Controller
     {
         private readonly IPostService _postService;
-        private readonly ContentManageDbContext _context; // For Categories dropdown
-        private readonly ContentManageIdentityDbContext _identityContext; // For Users dropdown
+        private readonly ICategoryService _categoryService;
+        private readonly ContentManageIdentityDbContext _identityContext;
 
-        public PostsController(IPostService postService, ContentManageDbContext context, ContentManageIdentityDbContext identityContext)
+        public PostsController(
+            IPostService postService,
+            ICategoryService categoryService,
+            ContentManageIdentityDbContext identityContext)
         {
             _postService = postService;
-            _context = context;
+            _categoryService = categoryService;
             _identityContext = identityContext;
         }
 
         // GET: Posts
         public async Task<IActionResult> Index()
         {
-            var posts = await _postService.GetAllPostsAsync();
+            var posts = await _postService.GetAllAsync();
             return View(posts);
+        }
+
+        // POST: Posts/TogglePublish/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Editor")]
+        public async Task<IActionResult> TogglePublish(Guid id)
+        {
+            await _postService.TogglePublishAsync(id);
+            return RedirectToAction(nameof(Index));
         }
 
         // GET: Posts/Details/5
@@ -37,17 +51,18 @@ namespace ContentManagementSystem.Controllers
         {
             if (id == null) return NotFound();
 
-            var post = await _postService.GetPostByIdAsync(id.Value);
+            var post = await _postService.GetByIdAsync(id.Value);
             if (post == null) return NotFound();
 
             return View(post);
         }
 
         // GET: Posts/Create
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
+            var categories = await _categoryService.GetAllAsync();
             ViewData["AuthorId"] = new SelectList(_identityContext.Users, "Id", "UserName");
-            ViewData["CategoryId"] = new SelectList(_context.Categories, "Id", "Name");
+            ViewData["CategoryId"] = new SelectList(categories, "Id", "Name");
             return View();
         }
 
@@ -58,11 +73,12 @@ namespace ContentManagementSystem.Controllers
         {
             if (ModelState.IsValid)
             {
-                await _postService.CreatePostAsync(postDto);
+                await _postService.CreateAsync(postDto);
                 return RedirectToAction(nameof(Index));
             }
+            var categories = await _categoryService.GetAllAsync();
             ViewData["AuthorId"] = new SelectList(_identityContext.Users, "Id", "UserName", postDto.AuthorId);
-            ViewData["CategoryId"] = new SelectList(_context.Categories, "Id", "Name", postDto.CategoryId);
+            ViewData["CategoryId"] = new SelectList(categories, "Id", "Name", postDto.CategoryId);
             return View(postDto);
         }
 
@@ -71,11 +87,12 @@ namespace ContentManagementSystem.Controllers
         {
             if (id == null) return NotFound();
 
-            var postDto = await _postService.GetPostByIdAsync(id.Value);
+            var postDto = await _postService.GetByIdAsync(id.Value);
             if (postDto == null) return NotFound();
-            
+
+            var categories = await _categoryService.GetAllAsync();
             ViewData["AuthorId"] = new SelectList(_identityContext.Users, "Id", "UserName", postDto.AuthorId);
-            ViewData["CategoryId"] = new SelectList(_context.Categories, "Id", "Name", postDto.CategoryId);
+            ViewData["CategoryId"] = new SelectList(categories, "Id", "Name", postDto.CategoryId);
             return View(postDto);
         }
 
@@ -90,17 +107,18 @@ namespace ContentManagementSystem.Controllers
             {
                 try
                 {
-                    await _postService.UpdatePostAsync(postDto);
+                    await _postService.UpdateAsync(postDto);
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!_postService.PostExists(postDto.Id)) return NotFound();
+                    if (!_postService.Exists(postDto.Id)) return NotFound();
                     else throw;
                 }
                 return RedirectToAction(nameof(Index));
             }
+            var categories = await _categoryService.GetAllAsync();
             ViewData["AuthorId"] = new SelectList(_identityContext.Users, "Id", "UserName", postDto.AuthorId);
-            ViewData["CategoryId"] = new SelectList(_context.Categories, "Id", "Name", postDto.CategoryId);
+            ViewData["CategoryId"] = new SelectList(categories, "Id", "Name", postDto.CategoryId);
             return View(postDto);
         }
 
@@ -109,7 +127,7 @@ namespace ContentManagementSystem.Controllers
         {
             if (id == null) return NotFound();
 
-            var postDto = await _postService.GetPostByIdAsync(id.Value);
+            var postDto = await _postService.GetByIdAsync(id.Value);
             if (postDto == null) return NotFound();
 
             return View(postDto);
@@ -120,8 +138,9 @@ namespace ContentManagementSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
-            await _postService.DeletePostAsync(id);
+            await _postService.DeleteAsync(id);
             return RedirectToAction(nameof(Index));
         }
     }
 }
+

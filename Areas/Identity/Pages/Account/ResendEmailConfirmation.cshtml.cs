@@ -1,3 +1,4 @@
+﻿using ContentManagementSystem.ApplicationCore.Entities.Identity;
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 #nullable disable
@@ -19,10 +20,10 @@ namespace ContentManagementSystem.Areas.Identity.Pages.Account
     [AllowAnonymous]
     public class ResendEmailConfirmationModel : PageModel
     {
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly UserManager<ContentUser> _userManager;
         private readonly IEmailSender _emailSender;
 
-        public ResendEmailConfirmationModel(UserManager<IdentityUser> userManager, IEmailSender emailSender)
+        public ResendEmailConfirmationModel(UserManager<ContentUser> userManager, IEmailSender emailSender)
         {
             _userManager = userManager;
             _emailSender = emailSender;

@@ -1,0 +1,120 @@
+@model ContentManagementSystem.ViewModels.Auth.LoginViewModel
+@{
+    ViewData["Title"] = "Đăng nhập";
+    Layout = "_AuthLayout";
+}
+
+<div class="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 p-8 sm:p-10">
+    <!-- Header with Brand Logo -->
+    <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-500/30 mb-4">
+            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
+            </svg>
+        </div>
+        <h1 class="text-2xl font-black text-slate-800 tracking-tight">CMS Portal</h1>
+        <p class="text-xs text-slate-400 mt-1 font-medium">Đăng nhập vào hệ thống quản lý nội dung</p>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="mb-5 p-4 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-700 text-xs font-medium flex items-center gap-2">
+            <svg class="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+            <span>@TempData["SuccessMessage"]</span>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="mb-5 p-4 bg-rose-50 border border-rose-100 rounded-xl text-rose-700 text-xs font-medium flex items-center gap-2">
+            <svg class="w-4 h-4 text-rose-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <span>@TempData["ErrorMessage"]</span>
+        </div>
+    }
+
+    <!-- Login Form -->
+    <form asp-controller="Auth" asp-action="Login" asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post" class="space-y-5">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="p-4 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 text-xs font-medium" role="alert"></div>
+
+        <!-- Email Field -->
+        <div>
+            <label asp-for="Email" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Email tài khoản</label>
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" /></svg>
+                </div>
+                <input asp-for="Email" id="loginEmail" class="block w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all placeholder:text-slate-400 text-slate-800" placeholder="admin@cms.com" autocomplete="username" required />
+            </div>
+            <span asp-validation-for="Email" class="text-xs text-rose-500 mt-1 block"></span>
+        </div>
+
+        <!-- Password Field -->
+        <div>
+            <div class="flex items-center justify-between mb-2">
+                <label asp-for="Password" class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Mật khẩu</label>
+                <a asp-controller="Auth" asp-action="ForgotPassword" class="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline">Quên mật khẩu?</a>
+            </div>
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                </div>
+                <input asp-for="Password" id="loginPassword" type="password" class="block w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all placeholder:text-slate-400 text-slate-800" placeholder="••••••••" autocomplete="current-password" required />
+            </div>
+            <span asp-validation-for="Password" class="text-xs text-rose-500 mt-1 block"></span>
+        </div>
+
+        <!-- Remember Me Toggle -->
+        <div class="flex items-center justify-between pt-1">
+            <label asp-for="RememberMe" class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input asp-for="RememberMe" type="checkbox" class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500" />
+                <span class="text-xs font-medium text-slate-600">Ghi nhớ đăng nhập</span>
+            </label>
+        </div>
+
+        <!-- Submit Button -->
+        <div>
+            <button type="submit" class="w-full flex items-center justify-center gap-2 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-500/30 transition-all hover:shadow-none active:scale-[0.98]">
+                <span>Đăng nhập</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+            </button>
+        </div>
+    </form>
+
+    <!-- Demo Role Switcher Quick Fill (Tiện ích test nhanh cho giảng viên / chấm bài) -->
+    <div class="mt-8 pt-6 border-t border-slate-100">
+        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center mb-3">Tài khoản thử nghiệm nhanh</p>
+        <div class="grid grid-cols-2 gap-2">
+            <button type="button" onclick="fillCredentials('admin@cms.com', 'Admin@123')" class="px-2.5 py-2 text-left bg-slate-50 hover:bg-blue-50 hover:border-blue-200 border border-slate-200/80 rounded-xl transition-all">
+                <div class="text-[11px] font-bold text-slate-700">👑 Admin</div>
+                <div class="text-[10px] text-slate-400 truncate">admin@cms.com</div>
+            </button>
+            <button type="button" onclick="fillCredentials('editor@cms.com', 'Editor@123')" class="px-2.5 py-2 text-left bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 border border-slate-200/80 rounded-xl transition-all">
+                <div class="text-[11px] font-bold text-slate-700">✍️ Editor</div>
+                <div class="text-[10px] text-slate-400 truncate">editor@cms.com</div>
+            </button>
+            <button type="button" onclick="fillCredentials('author@cms.com', 'Author@123')" class="px-2.5 py-2 text-left bg-slate-50 hover:bg-emerald-50 hover:border-emerald-200 border border-slate-200/80 rounded-xl transition-all">
+                <div class="text-[11px] font-bold text-slate-700">📝 Author</div>
+                <div class="text-[10px] text-slate-400 truncate">author@cms.com</div>
+            </button>
+            <button type="button" onclick="fillCredentials('moderator@cms.com', 'Moderator@123')" class="px-2.5 py-2 text-left bg-slate-50 hover:bg-purple-50 hover:border-purple-200 border border-slate-200/80 rounded-xl transition-all">
+                <div class="text-[11px] font-bold text-slate-700">🛡️ Moderator</div>
+                <div class="text-[10px] text-slate-400 truncate">moderator@cms.com</div>
+            </button>
+        </div>
+    </div>
+
+    <!-- Footer link to Register -->
+    <div class="mt-6 text-center text-xs text-slate-500">
+        Chưa có tài khoản?
+        <a asp-controller="Auth" asp-action="Register" class="font-bold text-blue-600 hover:text-blue-700 hover:underline">Đăng ký ngay</a>
+    </div>
+</div>
+
+<script>
+    function fillCredentials(email, password) {
+        document.getElementById('loginEmail').value = email;
+        document.getElementById('loginPassword').value = password;
+    }
+</script>
+

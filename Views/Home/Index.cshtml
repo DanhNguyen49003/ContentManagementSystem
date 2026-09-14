@@ -1,8 +1,231 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@using Microsoft.AspNetCore.Identity
+@using ContentManagementSystem.ApplicationCore.Entities.Identity
+@inject UserManager<ContentUser> UserManager
+@inject SignInManager<ContentUser> SignInManager
+
+@{
+    ViewData["Title"] = "Bảng điều khiển";
+    Layout = "_Layout";
+
+    ContentUser? currentUser = null;
+    string displayName = User.Identity?.Name ?? "Bạn";
+    string userAvatar = "";
+
+    if (SignInManager.IsSignedIn(User))
+    {
+        currentUser = await UserManager.GetUserAsync(User);
+        if (currentUser != null)
+        {
+            displayName = !string.IsNullOrWhiteSpace(currentUser.FullName) 
+                ? currentUser.FullName 
+                : (!string.IsNullOrWhiteSpace(currentUser.UserName) ? currentUser.UserName : (currentUser.Email ?? "Bạn"));
+            userAvatar = currentUser.Avatar ?? "";
+        }
+    }
+
+    if (string.IsNullOrEmpty(userAvatar))
+    {
+        userAvatar = $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(displayName)}&background=ffffff&color=2563eb&bold=true";
+    }
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="space-y-6">
+    <!-- Welcome banner -->
+    <div class="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 rounded-2xl p-6 text-white shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+        <div class="flex items-center gap-4">
+            <a asp-controller="Auth" asp-action="Profile" title="Chỉnh sửa ảnh đại diện và hồ sơ" class="relative group flex-shrink-0">
+                <img src="@userAvatar" alt="@displayName" class="w-16 h-16 rounded-2xl object-cover ring-4 ring-white/30 shadow-md bg-white group-hover:scale-105 transition-transform" onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name=@(Uri.EscapeDataString(displayName))&background=ffffff&color=2563eb&bold=true';" />
+                <span class="absolute -bottom-1 -right-1 bg-emerald-500 border-2 border-white w-4 h-4 rounded-full" title="Online"></span>
+            </a>
+            <div>
+                <h2 class="text-2xl font-bold flex items-center gap-2">
+                    Xin chào, @displayName! 👋
+                </h2>
+                <p class="text-blue-100 text-sm mt-1">Chào mừng quay trở lại hệ thống quản trị nội dung CMS. Hôm nay bạn muốn làm gì?</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3 flex-wrap">
+            <a asp-controller="Posts" asp-action="Create" class="inline-flex items-center gap-2 bg-white text-blue-700 font-semibold px-4 py-2.5 rounded-xl text-sm shadow hover:bg-blue-50 transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Viết bài mới
+            </a>
+            <a asp-controller="Categories" asp-action="Create" class="inline-flex items-center gap-2 bg-blue-500 bg-opacity-30 hover:bg-opacity-40 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-all border border-blue-400 border-opacity-30">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                Thêm danh mục
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Stats Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <!-- Card 1: Posts -->
+        <a asp-controller="Posts" asp-action="Index" class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow group">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Bài viết</span>
+                <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                </div>
+            </div>
+            <div class="mt-3">
+                <h3 class="text-2xl font-bold text-gray-800">Quản lý bài viết</h3>
+                <p class="text-xs text-blue-600 font-medium mt-1 flex items-center gap-1">
+                    Xem danh sách &rarr;
+                </p>
+            </div>
+        </a>
+
+        <!-- Card 2: Categories -->
+        <a asp-controller="Categories" asp-action="Index" class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow group">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Chuyên mục</span>
+                <div class="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                </div>
+            </div>
+            <div class="mt-3">
+                <h3 class="text-2xl font-bold text-gray-800">Danh mục</h3>
+                <p class="text-xs text-indigo-600 font-medium mt-1 flex items-center gap-1">
+                    Phân loại bài viết &rarr;
+                </p>
+            </div>
+        </a>
+
+        <!-- Card 3: Comments -->
+        <a asp-controller="Comments" asp-action="Index" class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow group">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Tương tác</span>
+                <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                </div>
+            </div>
+            <div class="mt-3">
+                <h3 class="text-2xl font-bold text-gray-800">Bình luận</h3>
+                <p class="text-xs text-amber-600 font-medium mt-1 flex items-center gap-1">
+                    Kiểm duyệt phản hồi &rarr;
+                </p>
+            </div>
+        </a>
+
+        <!-- Card 4: Contact Messages -->
+        <a asp-controller="ContactMessages" asp-action="Index" class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow group">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Liên hệ</span>
+                <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                </div>
+            </div>
+            <div class="mt-3">
+                <h3 class="text-2xl font-bold text-gray-800">Hộp thư</h3>
+                <p class="text-xs text-emerald-600 font-medium mt-1 flex items-center gap-1">
+                    Tin nhắn người dùng &rarr;
+                </p>
+            </div>
+        </a>
+    </div>
+
+    <!-- Quick Navigation Sections -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Content Management Hub -->
+        <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-bold text-gray-800 text-lg flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 bg-blue-600 rounded-full"></span>
+                    Quản lý nội dung & cấu trúc
+                </h3>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <a asp-controller="Posts" asp-action="Index" class="p-3.5 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 transition-all flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800 text-sm">Bài viết</p>
+                        <p class="text-xs text-gray-500">Tin tức, bài chia sẻ</p>
+                    </div>
+                </a>
+
+                <a asp-controller="Categories" asp-action="Index" class="p-3.5 rounded-xl border border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/50 transition-all flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800 text-sm">Chuyên mục</p>
+                        <p class="text-xs text-gray-500">Phân loại & slug</p>
+                    </div>
+                </a>
+
+                <a asp-controller="Tags" asp-action="Index" class="p-3.5 rounded-xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50/50 transition-all flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/></svg>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800 text-sm">Thẻ Tags</p>
+                        <p class="text-xs text-gray-500">Gắn nhãn tìm kiếm</p>
+                    </div>
+                </a>
+
+                <a asp-controller="Pages" asp-action="Index" class="p-3.5 rounded-xl border border-gray-100 hover:border-teal-200 hover:bg-teal-50/50 transition-all flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-teal-100 text-teal-600 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800 text-sm">Trang đơn</p>
+                        <p class="text-xs text-gray-500">Giới thiệu, điều khoản</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Marketing & Layout Hub -->
+        <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-bold text-gray-800 text-lg flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 bg-emerald-600 rounded-full"></span>
+                    Giao diện & Marketing
+                </h3>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <a asp-controller="Banners" asp-action="Index" class="p-3.5 rounded-xl border border-gray-100 hover:border-orange-200 hover:bg-orange-50/50 transition-all flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800 text-sm">Banners</p>
+                        <p class="text-xs text-gray-500">Ảnh bìa & quảng cáo</p>
+                    </div>
+                </a>
+
+                <a asp-controller="Menus" asp-action="Index" class="p-3.5 rounded-xl border border-gray-100 hover:border-sky-200 hover:bg-sky-50/50 transition-all flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800 text-sm">Menu</p>
+                        <p class="text-xs text-gray-500">Điều hướng website</p>
+                    </div>
+                </a>
+
+                <a asp-controller="Events" asp-action="Index" class="p-3.5 rounded-xl border border-gray-100 hover:border-rose-200 hover:bg-rose-50/50 transition-all flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800 text-sm">Sự kiện</p>
+                        <p class="text-xs text-gray-500">Lịch trình & địa điểm</p>
+                    </div>
+                </a>
+
+                <a asp-controller="NewsletterSubscribers" asp-action="Index" class="p-3.5 rounded-xl border border-gray-100 hover:border-emerald-200 hover:bg-emerald-50/50 transition-all flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800 text-sm">Newsletter</p>
+                        <p class="text-xs text-gray-500">Đăng ký nhận tin</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
+

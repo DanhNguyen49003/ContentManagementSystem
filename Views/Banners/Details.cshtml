@@ -1,52 +1,51 @@
 @model ContentManagementSystem.ApplicationCore.DTOs.BannerDto
 
 @{
-    Layout = null;
+    ViewData["Title"] = "Chi tiết Banner";
+    Layout = "_Layout";
 }
 
-<!DOCTYPE html>
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">Chi tiết Banner</h2>
+        </div>
+        <div class="flex items-center gap-2">
+            <a asp-action="Index" class="text-sm font-medium text-gray-600 hover:text-gray-900 bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm transition-all">
+                &larr; Quay lại
+            </a>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="inline-flex items-center gap-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-xl shadow-sm transition-all">
+                Chỉnh sửa
+            </a>
+        </div>
+    </div>
 
-<html>
-<head>
-    <meta name="viewport" content="width=device-width" />
-    <title>Details</title>
-</head>
-<body>
-
-<div>
-    <h4>Banner</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Title)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Title)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.ImageUrl)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.ImageUrl)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.LinkUrl)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.LinkUrl)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.IsActive)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.IsActive)
-        </dd>
-    </dl>
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8 space-y-4">
+        @if (!string.IsNullOrEmpty(Model.ImageUrl))
+        {
+            <div class="rounded-xl overflow-hidden border border-gray-100 shadow-sm">
+                <img src="@Model.ImageUrl" alt="@Model.Title" class="w-full h-48 object-cover" onerror="this.src='https://via.placeholder.com/600x200?text=Banner'" />
+            </div>
+        }
+        <div>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-1">Tiêu đề:</span>
+            <p class="text-xl font-bold text-gray-900">@Model.Title</p>
+        </div>
+        <div>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-1">Liên kết:</span>
+            <a href="@Model.LinkUrl" target="_blank" class="text-blue-600 hover:underline text-sm break-all">@Model.LinkUrl</a>
+        </div>
+        <div>
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-1">Trạng thái:</span>
+            @if (Model.IsActive)
+            {
+                <span class="px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-semibold">Hoạt động</span>
+            }
+            else
+            {
+                <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">Ẩn</span>
+            }
+        </div>
+    </div>
 </div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
-</div>
-</body>
-</html>
 

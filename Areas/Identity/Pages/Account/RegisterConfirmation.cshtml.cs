@@ -1,3 +1,4 @@
+﻿using ContentManagementSystem.ApplicationCore.Entities.Identity;
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 #nullable disable
@@ -17,10 +18,10 @@ namespace ContentManagementSystem.Areas.Identity.Pages.Account
     [AllowAnonymous]
     public class RegisterConfirmationModel : PageModel
     {
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly UserManager<ContentUser> _userManager;
         private readonly IEmailSender _sender;
 
-        public RegisterConfirmationModel(UserManager<IdentityUser> userManager, IEmailSender sender)
+        public RegisterConfirmationModel(UserManager<ContentUser> userManager, IEmailSender sender)
         {
             _userManager = userManager;
             _sender = sender;

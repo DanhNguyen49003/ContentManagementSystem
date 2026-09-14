@@ -1,22 +1,23 @@
+using Microsoft.AspNetCore.Authorization;
 using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using ContentManagementSystem.ApplicationCore.DTOs;
-using ContentManagementSystem.ApplicationCore.Interfaces;
-using ContentManagementSystem.DataLayer;
+using ContentManagementSystem.Service.Interface;
 
 namespace ContentManagementSystem.Controllers
 {
+    [Authorize(Roles = "Admin")]
     public class MenuItemsController : Controller
     {
         private readonly IMenuItemService _service;
-        private readonly ContentManageDbContext _context;
+        private readonly IMenuService _menuService;
 
-        public MenuItemsController(IMenuItemService service, ContentManagementSystem.DataLayer.ContentManageDbContext context)
+        public MenuItemsController(IMenuItemService service, IMenuService menuService)
         {
             _service = service;
-            _context = context;
+            _menuService = menuService;
         }
 
         public async Task<IActionResult> Index()
@@ -32,10 +33,10 @@ namespace ContentManagementSystem.Controllers
             return View(dto);
         }
 
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
-            ViewData["MenuId"] = new SelectList(_context.Menus, "Id", "Name");
-            ViewData["MenuId"] = new SelectList(_context.Menus, "Id", "Name");
+            var menus = await _menuService.GetAllAsync();
+            ViewData["MenuId"] = new SelectList(menus, "Id", "Name");
             return View();
         }
 
@@ -48,8 +49,8 @@ namespace ContentManagementSystem.Controllers
                 await _service.CreateAsync(dto);
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["MenuId"] = new SelectList(_context.Menus, "Id", "Name");
-            ViewData["MenuId"] = new SelectList(_context.Menus, "Id", "Name");
+            var menus = await _menuService.GetAllAsync();
+            ViewData["MenuId"] = new SelectList(menus, "Id", "Name", dto.MenuId);
             return View(dto);
         }
 
@@ -58,8 +59,8 @@ namespace ContentManagementSystem.Controllers
             if (id == null) return NotFound();
             var dto = await _service.GetByIdAsync(id.Value);
             if (dto == null) return NotFound();
-            ViewData["MenuId"] = new SelectList(_context.Menus, "Id", "Name");
-            ViewData["MenuId"] = new SelectList(_context.Menus, "Id", "Name");
+            var menus = await _menuService.GetAllAsync();
+            ViewData["MenuId"] = new SelectList(menus, "Id", "Name", dto.MenuId);
             return View(dto);
         }
 
@@ -74,8 +75,8 @@ namespace ContentManagementSystem.Controllers
                 await _service.UpdateAsync(dto);
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["MenuId"] = new SelectList(_context.Menus, "Id", "Name");
-            ViewData["MenuId"] = new SelectList(_context.Menus, "Id", "Name");
+            var menus = await _menuService.GetAllAsync();
+            ViewData["MenuId"] = new SelectList(menus, "Id", "Name", dto.MenuId);
             return View(dto);
         }
 
@@ -96,6 +97,4 @@ namespace ContentManagementSystem.Controllers
         }
     }
 }
-
-
 

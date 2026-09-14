@@ -1,3 +1,4 @@
+﻿using ContentManagementSystem.ApplicationCore.Entities.Identity;
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 #nullable disable
@@ -14,11 +15,11 @@ namespace ContentManagementSystem.Areas.Identity.Pages.Account.Manage
 {
     public class GenerateRecoveryCodesModel : PageModel
     {
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly UserManager<ContentUser> _userManager;
         private readonly ILogger<GenerateRecoveryCodesModel> _logger;
 
         public GenerateRecoveryCodesModel(
-            UserManager<IdentityUser> userManager,
+            UserManager<ContentUser> userManager,
             ILogger<GenerateRecoveryCodesModel> logger)
         {
             _userManager = userManager;

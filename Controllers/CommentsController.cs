@@ -1,22 +1,23 @@
+using Microsoft.AspNetCore.Authorization;
 using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using ContentManagementSystem.ApplicationCore.DTOs;
-using ContentManagementSystem.ApplicationCore.Interfaces;
-using ContentManagementSystem.DataLayer;
+using ContentManagementSystem.Service.Interface;
 
 namespace ContentManagementSystem.Controllers
 {
+    [Authorize(Roles = "Admin,Moderator")]
     public class CommentsController : Controller
     {
         private readonly ICommentService _service;
-        private readonly ContentManageDbContext _context;
+        private readonly IPostService _postService;
 
-        public CommentsController(ICommentService service, ContentManagementSystem.DataLayer.ContentManageDbContext context)
+        public CommentsController(ICommentService service, IPostService postService)
         {
             _service = service;
-            _context = context;
+            _postService = postService;
         }
 
         public async Task<IActionResult> Index()
@@ -32,10 +33,26 @@ namespace ContentManagementSystem.Controllers
             return View(dto);
         }
 
-        public IActionResult Create()
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Approve(Guid id)
         {
-            ViewData["PostId"] = new SelectList(_context.Posts, "Id", "Content");
-            ViewData["PostId"] = new SelectList(_context.Posts, "Id", "Content");
+            await _service.ApproveAsync(id);
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Reject(Guid id)
+        {
+            await _service.RejectAsync(id);
+            return RedirectToAction(nameof(Index));
+        }
+
+        public async Task<IActionResult> Create()
+        {
+            var posts = await _postService.GetAllAsync();
+            ViewData["PostId"] = new SelectList(posts, "Id", "Title");
             return View();
         }
 
@@ -48,8 +65,8 @@ namespace ContentManagementSystem.Controllers
                 await _service.CreateAsync(dto);
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["PostId"] = new SelectList(_context.Posts, "Id", "Content");
-            ViewData["PostId"] = new SelectList(_context.Posts, "Id", "Content");
+            var posts = await _postService.GetAllAsync();
+            ViewData["PostId"] = new SelectList(posts, "Id", "Title", dto.PostId);
             return View(dto);
         }
 
@@ -58,8 +75,8 @@ namespace ContentManagementSystem.Controllers
             if (id == null) return NotFound();
             var dto = await _service.GetByIdAsync(id.Value);
             if (dto == null) return NotFound();
-            ViewData["PostId"] = new SelectList(_context.Posts, "Id", "Content");
-            ViewData["PostId"] = new SelectList(_context.Posts, "Id", "Content");
+            var posts = await _postService.GetAllAsync();
+            ViewData["PostId"] = new SelectList(posts, "Id", "Title", dto.PostId);
             return View(dto);
         }
 
@@ -74,8 +91,8 @@ namespace ContentManagementSystem.Controllers
                 await _service.UpdateAsync(dto);
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["PostId"] = new SelectList(_context.Posts, "Id", "Content");
-            ViewData["PostId"] = new SelectList(_context.Posts, "Id", "Content");
+            var posts = await _postService.GetAllAsync();
+            ViewData["PostId"] = new SelectList(posts, "Id", "Title", dto.PostId);
             return View(dto);
         }
 
@@ -96,6 +113,4 @@ namespace ContentManagementSystem.Controllers
         }
     }
 }
-
-
 

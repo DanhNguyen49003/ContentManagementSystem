@@ -1,3 +1,4 @@
+﻿using ContentManagementSystem.ApplicationCore.Entities.Identity;
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 #nullable disable
@@ -19,10 +20,10 @@ namespace ContentManagementSystem.Areas.Identity.Pages.Account
 {
     public class LoginModel : PageModel
     {
-        private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly SignInManager<ContentUser> _signInManager;
         private readonly ILogger<LoginModel> _logger;
 
-        public LoginModel(SignInManager<IdentityUser> signInManager, ILogger<LoginModel> logger)
+        public LoginModel(SignInManager<ContentUser> signInManager, ILogger<LoginModel> logger)
         {
             _signInManager = signInManager;
             _logger = logger;
