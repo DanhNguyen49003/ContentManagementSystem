@@ -1,4 +1,4 @@
-@model IEnumerable<ContentManagementSystem.ApplicationCore.Entities.MenuItem>
+@model IEnumerable<ContentManagementSystem.ApplicationCore.DTOs.MenuItemDto>
 
 @{
     Layout = null;
@@ -24,9 +24,7 @@
             <th>
                 @Html.DisplayNameFor(model => model.Url)
             </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Menu)
-            </th>
+            
             <th></th>
         </tr>
     </thead>
@@ -39,9 +37,7 @@
             <td>
                 @Html.DisplayFor(modelItem => item.Url)
             </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Menu.Name)
-            </td>
+            
             <td>
                 <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
                 <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
@@ -53,3 +49,5 @@
 </table>
 </body>
 </html>
+
+

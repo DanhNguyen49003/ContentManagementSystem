@@ -1,4 +1,4 @@
-@model ContentManagementSystem.ApplicationCore.Entities.Post
+﻿@model ContentManagementSystem.ApplicationCore.DTOs.PostDto
 
 @{
     ViewData["Title"] = "Edit";
@@ -44,9 +44,9 @@
                 <span asp-validation-for="CreatedAt" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="PublishedAt" class="control-label"></label>
-                <input asp-for="PublishedAt" class="form-control" />
-                <span asp-validation-for="PublishedAt" class="text-danger"></span>
+                <label asp-for="CreatedAt" class="control-label"></label>
+                <input asp-for="CreatedAt" class="form-control" />
+                <span asp-validation-for="CreatedAt" class="text-danger"></span>
             </div>
             <div class="form-group">
                 <label asp-for="AuthorId" class="control-label"></label>
@@ -72,3 +72,5 @@
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
 }
+
+

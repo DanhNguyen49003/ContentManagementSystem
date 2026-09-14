@@ -1,4 +1,4 @@
-﻿@model IEnumerable<ContentManagementSystem.ApplicationCore.Entities.Post>
+﻿@model IEnumerable<ContentManagementSystem.ApplicationCore.DTOs.PostDto>
 
 @{
     Layout = null;
@@ -70,7 +70,7 @@
                                     <div class="text-xs text-gray-500 mt-1">ID: @post.Id.ToString().Substring(0,8)</div>
                                 </td>
                                 <td class="px-6 py-4 text-gray-600">
-                                    @(post.Category != null ? post.Category.Name : "Chưa phân loại")
+                                    @(!string.IsNullOrEmpty(post.CategoryName) ? post.CategoryName : "Chưa phân loại")
                                 </td>
                                 <td class="px-6 py-4">
                                     @if (post.IsPublished)
@@ -112,3 +112,4 @@
 
 </body>
 </html>
+

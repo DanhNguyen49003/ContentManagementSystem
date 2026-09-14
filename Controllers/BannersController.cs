@@ -1,162 +1,94 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using ContentManagementSystem.ApplicationCore.Entities;
-using ContentManagementSystem.DataLayer;
+using ContentManagementSystem.ApplicationCore.DTOs;
+using ContentManagementSystem.ApplicationCore.Interfaces;
+
 
 namespace ContentManagementSystem.Controllers
 {
     public class BannersController : Controller
     {
-        private readonly ContentManageDbContext _context;
+        private readonly IBannerService _service;
+        
 
-        public BannersController(ContentManageDbContext context)
+        public BannersController(IBannerService service)
         {
-            _context = context;
+            _service = service;
+            
         }
 
-        // GET: Banners
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Banners.ToListAsync());
+            return View(await _service.GetAllAsync());
         }
 
-        // GET: Banners/Details/5
         public async Task<IActionResult> Details(Guid? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var banner = await _context.Banners
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (banner == null)
-            {
-                return NotFound();
-            }
-
-            return View(banner);
+            if (id == null) return NotFound();
+            var dto = await _service.GetByIdAsync(id.Value);
+            if (dto == null) return NotFound();
+            return View(dto);
         }
 
-        // GET: Banners/Create
         public IActionResult Create()
         {
+            
             return View();
         }
 
-        // POST: Banners/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Title,ImageUrl,LinkUrl,IsActive")] Banner banner)
+        public async Task<IActionResult> Create(BannerDto dto)
         {
             if (ModelState.IsValid)
             {
-                banner.Id = Guid.NewGuid();
-                _context.Banners.Add(banner);
-                await _context.SaveChangesAsync();
+                await _service.CreateAsync(dto);
                 return RedirectToAction(nameof(Index));
             }
-            return View(banner);
+            
+            return View(dto);
         }
 
-        // GET: Banners/Edit/5
         public async Task<IActionResult> Edit(Guid? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var banner = await _context.Banners.FindAsync(id);
-            if (banner == null)
-            {
-                return NotFound();
-            }
-            return View(banner);
+            if (id == null) return NotFound();
+            var dto = await _service.GetByIdAsync(id.Value);
+            if (dto == null) return NotFound();
+            
+            return View(dto);
         }
 
-        // POST: Banners/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Guid id, [Bind("Id,Title,ImageUrl,LinkUrl,IsActive")] Banner banner)
+        public async Task<IActionResult> Edit(Guid id, BannerDto dto)
         {
-            if (id != banner.Id)
-            {
-                return NotFound();
-            }
+            if (id != dto.Id) return NotFound();
 
             if (ModelState.IsValid)
             {
-                try
-                {
-                    _context.Banners.Update(banner);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!BannerExists(banner.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
+                await _service.UpdateAsync(dto);
                 return RedirectToAction(nameof(Index));
             }
-            return View(banner);
+            
+            return View(dto);
         }
 
-        // GET: Banners/Delete/5
         public async Task<IActionResult> Delete(Guid? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var banner = await _context.Banners
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (banner == null)
-            {
-                return NotFound();
-            }
-
-            return View(banner);
+            if (id == null) return NotFound();
+            var dto = await _service.GetByIdAsync(id.Value);
+            if (dto == null) return NotFound();
+            return View(dto);
         }
 
-        // POST: Banners/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
-            var banner = await _context.Banners.FindAsync(id);
-            if (banner != null)
-            {
-                _context.Banners.Remove(banner);
-            }
-
-            await _context.SaveChangesAsync();
+            await _service.DeleteAsync(id);
             return RedirectToAction(nameof(Index));
-        }
-
-        private bool BannerExists(Guid id)
-        {
-            return _context.Banners.Any(e => e.Id == id);
         }
     }
 }
-
-
-
-

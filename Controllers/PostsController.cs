@@ -7,16 +7,20 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ContentManagementSystem.ApplicationCore.Entities;
 using ContentManagementSystem.DataLayer;
+using ContentManagementSystem.ApplicationCore.Interfaces;
+using ContentManagementSystem.ApplicationCore.DTOs;
 
 namespace ContentManagementSystem.Controllers
 {
     public class PostsController : Controller
     {
-        private readonly ContentManageDbContext _context;
-        private readonly ContentManageIdentityDbContext _identityContext;
+        private readonly IPostService _postService;
+        private readonly ContentManageDbContext _context; // For Categories dropdown
+        private readonly ContentManageIdentityDbContext _identityContext; // For Users dropdown
 
-        public PostsController(ContentManageDbContext context, ContentManageIdentityDbContext identityContext)
+        public PostsController(IPostService postService, ContentManageDbContext context, ContentManageIdentityDbContext identityContext)
         {
+            _postService = postService;
             _context = context;
             _identityContext = identityContext;
         }
@@ -24,26 +28,17 @@ namespace ContentManagementSystem.Controllers
         // GET: Posts
         public async Task<IActionResult> Index()
         {
-            var contentManageDbContext = _context.Posts.Include(p => p.Author).Include(p => p.Category);
-            return View(await contentManageDbContext.ToListAsync());
+            var posts = await _postService.GetAllPostsAsync();
+            return View(posts);
         }
 
         // GET: Posts/Details/5
         public async Task<IActionResult> Details(Guid? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
-            var post = await _context.Posts
-                .Include(p => p.Author)
-                .Include(p => p.Category)
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (post == null)
-            {
-                return NotFound();
-            }
+            var post = await _postService.GetPostByIdAsync(id.Value);
+            if (post == null) return NotFound();
 
             return View(post);
         }
@@ -51,102 +46,73 @@ namespace ContentManagementSystem.Controllers
         // GET: Posts/Create
         public IActionResult Create()
         {
-            ViewData["AuthorId"] = new SelectList(_identityContext.Users, "Id", "Email");
-            ViewData["CategoryId"] = new SelectList(_context.Categories, "Id", "Description");
+            ViewData["AuthorId"] = new SelectList(_identityContext.Users, "Id", "UserName");
+            ViewData["CategoryId"] = new SelectList(_context.Categories, "Id", "Name");
             return View();
         }
 
         // POST: Posts/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Title,Slug,Content,Summary,IsPublished,CreatedAt,PublishedAt,AuthorId,CategoryId")] Post post)
+        public async Task<IActionResult> Create([Bind("Title,Slug,Summary,Content,IsPublished,CategoryId,AuthorId")] PostDto postDto)
         {
             if (ModelState.IsValid)
             {
-                _context.Posts.Add(post);
-                await _context.SaveChangesAsync();
+                await _postService.CreatePostAsync(postDto);
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["AuthorId"] = new SelectList(_identityContext.Users, "Id", "Email", post.AuthorId);
-            ViewData["CategoryId"] = new SelectList(_context.Categories, "Id", "Description", post.CategoryId);
-            return View(post);
+            ViewData["AuthorId"] = new SelectList(_identityContext.Users, "Id", "UserName", postDto.AuthorId);
+            ViewData["CategoryId"] = new SelectList(_context.Categories, "Id", "Name", postDto.CategoryId);
+            return View(postDto);
         }
 
         // GET: Posts/Edit/5
         public async Task<IActionResult> Edit(Guid? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
-            var post = await _context.Posts.FindAsync(id);
-            if (post == null)
-            {
-                return NotFound();
-            }
-            ViewData["AuthorId"] = new SelectList(_identityContext.Users, "Id", "Email", post.AuthorId);
-            ViewData["CategoryId"] = new SelectList(_context.Categories, "Id", "Description", post.CategoryId);
-            return View(post);
+            var postDto = await _postService.GetPostByIdAsync(id.Value);
+            if (postDto == null) return NotFound();
+            
+            ViewData["AuthorId"] = new SelectList(_identityContext.Users, "Id", "UserName", postDto.AuthorId);
+            ViewData["CategoryId"] = new SelectList(_context.Categories, "Id", "Name", postDto.CategoryId);
+            return View(postDto);
         }
 
         // POST: Posts/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Guid id, [Bind("Id,Title,Slug,Content,Summary,IsPublished,CreatedAt,PublishedAt,AuthorId,CategoryId")] Post post)
+        public async Task<IActionResult> Edit(Guid id, [Bind("Id,Title,Slug,Summary,Content,IsPublished,CategoryId,AuthorId")] PostDto postDto)
         {
-            if (id != post.Id)
-            {
-                return NotFound();
-            }
+            if (id != postDto.Id) return NotFound();
 
             if (ModelState.IsValid)
             {
                 try
                 {
-                    _context.Posts.Update(post);
-                    await _context.SaveChangesAsync();
+                    await _postService.UpdatePostAsync(postDto);
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!PostExists(post.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
+                    if (!_postService.PostExists(postDto.Id)) return NotFound();
+                    else throw;
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["AuthorId"] = new SelectList(_identityContext.Users, "Id", "Email", post.AuthorId);
-            ViewData["CategoryId"] = new SelectList(_context.Categories, "Id", "Description", post.CategoryId);
-            return View(post);
+            ViewData["AuthorId"] = new SelectList(_identityContext.Users, "Id", "UserName", postDto.AuthorId);
+            ViewData["CategoryId"] = new SelectList(_context.Categories, "Id", "Name", postDto.CategoryId);
+            return View(postDto);
         }
 
         // GET: Posts/Delete/5
         public async Task<IActionResult> Delete(Guid? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
-            var post = await _context.Posts
-                .Include(p => p.Author)
-                .Include(p => p.Category)
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (post == null)
-            {
-                return NotFound();
-            }
+            var postDto = await _postService.GetPostByIdAsync(id.Value);
+            if (postDto == null) return NotFound();
 
-            return View(post);
+            return View(postDto);
         }
 
         // POST: Posts/Delete/5
@@ -154,25 +120,8 @@ namespace ContentManagementSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
-            var post = await _context.Posts.FindAsync(id);
-            if (post != null)
-            {
-                _context.Posts.Remove(post);
-            }
-
-            await _context.SaveChangesAsync();
+            await _postService.DeletePostAsync(id);
             return RedirectToAction(nameof(Index));
-        }
-
-        private bool PostExists(Guid id)
-        {
-            return _context.Posts.Any(e => e.Id == id);
         }
     }
 }
-
-
-
-
-
-

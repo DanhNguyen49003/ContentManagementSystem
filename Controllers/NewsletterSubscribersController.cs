@@ -1,162 +1,94 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using ContentManagementSystem.ApplicationCore.Entities;
-using ContentManagementSystem.DataLayer;
+using ContentManagementSystem.ApplicationCore.DTOs;
+using ContentManagementSystem.ApplicationCore.Interfaces;
+
 
 namespace ContentManagementSystem.Controllers
 {
     public class NewsletterSubscribersController : Controller
     {
-        private readonly ContentManageDbContext _context;
+        private readonly INewsletterSubscriberService _service;
+        
 
-        public NewsletterSubscribersController(ContentManageDbContext context)
+        public NewsletterSubscribersController(INewsletterSubscriberService service)
         {
-            _context = context;
+            _service = service;
+            
         }
 
-        // GET: NewsletterSubscribers
         public async Task<IActionResult> Index()
         {
-            return View(await _context.NewsletterSubscribers.ToListAsync());
+            return View(await _service.GetAllAsync());
         }
 
-        // GET: NewsletterSubscribers/Details/5
         public async Task<IActionResult> Details(Guid? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var newsletterSubscriber = await _context.NewsletterSubscribers
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (newsletterSubscriber == null)
-            {
-                return NotFound();
-            }
-
-            return View(newsletterSubscriber);
+            if (id == null) return NotFound();
+            var dto = await _service.GetByIdAsync(id.Value);
+            if (dto == null) return NotFound();
+            return View(dto);
         }
 
-        // GET: NewsletterSubscribers/Create
         public IActionResult Create()
         {
+            
             return View();
         }
 
-        // POST: NewsletterSubscribers/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Email,IsActive,CreatedAt")] NewsletterSubscriber newsletterSubscriber)
+        public async Task<IActionResult> Create(NewsletterSubscriberDto dto)
         {
             if (ModelState.IsValid)
             {
-                newsletterSubscriber.Id = Guid.NewGuid();
-                _context.NewsletterSubscribers.Add(newsletterSubscriber);
-                await _context.SaveChangesAsync();
+                await _service.CreateAsync(dto);
                 return RedirectToAction(nameof(Index));
             }
-            return View(newsletterSubscriber);
+            
+            return View(dto);
         }
 
-        // GET: NewsletterSubscribers/Edit/5
         public async Task<IActionResult> Edit(Guid? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var newsletterSubscriber = await _context.NewsletterSubscribers.FindAsync(id);
-            if (newsletterSubscriber == null)
-            {
-                return NotFound();
-            }
-            return View(newsletterSubscriber);
+            if (id == null) return NotFound();
+            var dto = await _service.GetByIdAsync(id.Value);
+            if (dto == null) return NotFound();
+            
+            return View(dto);
         }
 
-        // POST: NewsletterSubscribers/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Guid id, [Bind("Id,Email,IsActive,CreatedAt")] NewsletterSubscriber newsletterSubscriber)
+        public async Task<IActionResult> Edit(Guid id, NewsletterSubscriberDto dto)
         {
-            if (id != newsletterSubscriber.Id)
-            {
-                return NotFound();
-            }
+            if (id != dto.Id) return NotFound();
 
             if (ModelState.IsValid)
             {
-                try
-                {
-                    _context.NewsletterSubscribers.Update(newsletterSubscriber);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!NewsletterSubscriberExists(newsletterSubscriber.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
+                await _service.UpdateAsync(dto);
                 return RedirectToAction(nameof(Index));
             }
-            return View(newsletterSubscriber);
+            
+            return View(dto);
         }
 
-        // GET: NewsletterSubscribers/Delete/5
         public async Task<IActionResult> Delete(Guid? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var newsletterSubscriber = await _context.NewsletterSubscribers
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (newsletterSubscriber == null)
-            {
-                return NotFound();
-            }
-
-            return View(newsletterSubscriber);
+            if (id == null) return NotFound();
+            var dto = await _service.GetByIdAsync(id.Value);
+            if (dto == null) return NotFound();
+            return View(dto);
         }
 
-        // POST: NewsletterSubscribers/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
-            var newsletterSubscriber = await _context.NewsletterSubscribers.FindAsync(id);
-            if (newsletterSubscriber != null)
-            {
-                _context.NewsletterSubscribers.Remove(newsletterSubscriber);
-            }
-
-            await _context.SaveChangesAsync();
+            await _service.DeleteAsync(id);
             return RedirectToAction(nameof(Index));
-        }
-
-        private bool NewsletterSubscriberExists(Guid id)
-        {
-            return _context.NewsletterSubscribers.Any(e => e.Id == id);
         }
     }
 }
-
-
-
-

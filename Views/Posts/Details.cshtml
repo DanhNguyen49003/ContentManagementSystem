@@ -1,4 +1,4 @@
-@model ContentManagementSystem.ApplicationCore.Entities.Post
+﻿@model ContentManagementSystem.ApplicationCore.DTOs.PostDto
 
 @{
     ViewData["Title"] = "Details";
@@ -47,22 +47,22 @@
             @Html.DisplayFor(model => model.CreatedAt)
         </dd>
         <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PublishedAt)
+            @Html.DisplayNameFor(model => model.CreatedAt)
         </dt>
         <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PublishedAt)
+            @Html.DisplayFor(model => model.CreatedAt)
         </dd>
         <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Author)
+            @Html.DisplayNameFor(model => model.AuthorName)
         </dt>
         <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Author.Email)
+            @Html.DisplayFor(model => model.AuthorName)
         </dd>
         <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Category)
+            @Html.DisplayNameFor(model => model.CategoryName)
         </dt>
         <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Category.Description)
+            @Html.DisplayFor(model => model.CategoryName)
         </dd>
     </dl>
 </div>
@@ -70,3 +70,6 @@
     <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
     <a asp-action="Index">Back to List</a>
 </div>
+
+
+

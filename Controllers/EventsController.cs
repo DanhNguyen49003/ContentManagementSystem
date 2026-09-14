@@ -1,162 +1,94 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using ContentManagementSystem.ApplicationCore.Entities;
-using ContentManagementSystem.DataLayer;
+using ContentManagementSystem.ApplicationCore.DTOs;
+using ContentManagementSystem.ApplicationCore.Interfaces;
+
 
 namespace ContentManagementSystem.Controllers
 {
     public class EventsController : Controller
     {
-        private readonly ContentManageDbContext _context;
+        private readonly IEventService _service;
+        
 
-        public EventsController(ContentManageDbContext context)
+        public EventsController(IEventService service)
         {
-            _context = context;
+            _service = service;
+            
         }
 
-        // GET: Events
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Events.ToListAsync());
+            return View(await _service.GetAllAsync());
         }
 
-        // GET: Events/Details/5
         public async Task<IActionResult> Details(Guid? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var @event = await _context.Events
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (@event == null)
-            {
-                return NotFound();
-            }
-
-            return View(@event);
+            if (id == null) return NotFound();
+            var dto = await _service.GetByIdAsync(id.Value);
+            if (dto == null) return NotFound();
+            return View(dto);
         }
 
-        // GET: Events/Create
         public IActionResult Create()
         {
+            
             return View();
         }
 
-        // POST: Events/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Name,EventDate,Location,CreatedAt")] Event @event)
+        public async Task<IActionResult> Create(EventDto dto)
         {
             if (ModelState.IsValid)
             {
-                @event.Id = Guid.NewGuid();
-                _context.Events.Add(@event);
-                await _context.SaveChangesAsync();
+                await _service.CreateAsync(dto);
                 return RedirectToAction(nameof(Index));
             }
-            return View(@event);
+            
+            return View(dto);
         }
 
-        // GET: Events/Edit/5
         public async Task<IActionResult> Edit(Guid? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var @event = await _context.Events.FindAsync(id);
-            if (@event == null)
-            {
-                return NotFound();
-            }
-            return View(@event);
+            if (id == null) return NotFound();
+            var dto = await _service.GetByIdAsync(id.Value);
+            if (dto == null) return NotFound();
+            
+            return View(dto);
         }
 
-        // POST: Events/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Guid id, [Bind("Id,Name,EventDate,Location,CreatedAt")] Event @event)
+        public async Task<IActionResult> Edit(Guid id, EventDto dto)
         {
-            if (id != @event.Id)
-            {
-                return NotFound();
-            }
+            if (id != dto.Id) return NotFound();
 
             if (ModelState.IsValid)
             {
-                try
-                {
-                    _context.Events.Update(@event);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!EventExists(@event.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
+                await _service.UpdateAsync(dto);
                 return RedirectToAction(nameof(Index));
             }
-            return View(@event);
+            
+            return View(dto);
         }
 
-        // GET: Events/Delete/5
         public async Task<IActionResult> Delete(Guid? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var @event = await _context.Events
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (@event == null)
-            {
-                return NotFound();
-            }
-
-            return View(@event);
+            if (id == null) return NotFound();
+            var dto = await _service.GetByIdAsync(id.Value);
+            if (dto == null) return NotFound();
+            return View(dto);
         }
 
-        // POST: Events/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
-            var @event = await _context.Events.FindAsync(id);
-            if (@event != null)
-            {
-                _context.Events.Remove(@event);
-            }
-
-            await _context.SaveChangesAsync();
+            await _service.DeleteAsync(id);
             return RedirectToAction(nameof(Index));
-        }
-
-        private bool EventExists(Guid id)
-        {
-            return _context.Events.Any(e => e.Id == id);
         }
     }
 }
-
-
-
-

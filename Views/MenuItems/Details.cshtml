@@ -1,4 +1,4 @@
-@model ContentManagementSystem.ApplicationCore.Entities.MenuItem
+@model ContentManagementSystem.ApplicationCore.DTOs.MenuItemDto
 
 @{
     Layout = null;
@@ -29,12 +29,8 @@
         <dd class = "col-sm-10">
             @Html.DisplayFor(model => model.Url)
         </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Menu)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Menu.Name)
-        </dd>
+        
+        
     </dl>
 </div>
 <div>
@@ -43,3 +39,5 @@
 </div>
 </body>
 </html>
+
+

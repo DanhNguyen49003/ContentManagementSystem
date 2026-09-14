@@ -1,162 +1,94 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using ContentManagementSystem.ApplicationCore.Entities;
-using ContentManagementSystem.DataLayer;
+using ContentManagementSystem.ApplicationCore.DTOs;
+using ContentManagementSystem.ApplicationCore.Interfaces;
+
 
 namespace ContentManagementSystem.Controllers
 {
     public class MenusController : Controller
     {
-        private readonly ContentManageDbContext _context;
+        private readonly IMenuService _service;
+        
 
-        public MenusController(ContentManageDbContext context)
+        public MenusController(IMenuService service)
         {
-            _context = context;
+            _service = service;
+            
         }
 
-        // GET: Menus
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Menus.ToListAsync());
+            return View(await _service.GetAllAsync());
         }
 
-        // GET: Menus/Details/5
         public async Task<IActionResult> Details(Guid? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var menu = await _context.Menus
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (menu == null)
-            {
-                return NotFound();
-            }
-
-            return View(menu);
+            if (id == null) return NotFound();
+            var dto = await _service.GetByIdAsync(id.Value);
+            if (dto == null) return NotFound();
+            return View(dto);
         }
 
-        // GET: Menus/Create
         public IActionResult Create()
         {
+            
             return View();
         }
 
-        // POST: Menus/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Name,Position,CreatedAt")] Menu menu)
+        public async Task<IActionResult> Create(MenuDto dto)
         {
             if (ModelState.IsValid)
             {
-                menu.Id = Guid.NewGuid();
-                _context.Menus.Add(menu);
-                await _context.SaveChangesAsync();
+                await _service.CreateAsync(dto);
                 return RedirectToAction(nameof(Index));
             }
-            return View(menu);
+            
+            return View(dto);
         }
 
-        // GET: Menus/Edit/5
         public async Task<IActionResult> Edit(Guid? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var menu = await _context.Menus.FindAsync(id);
-            if (menu == null)
-            {
-                return NotFound();
-            }
-            return View(menu);
+            if (id == null) return NotFound();
+            var dto = await _service.GetByIdAsync(id.Value);
+            if (dto == null) return NotFound();
+            
+            return View(dto);
         }
 
-        // POST: Menus/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Guid id, [Bind("Id,Name,Position,CreatedAt")] Menu menu)
+        public async Task<IActionResult> Edit(Guid id, MenuDto dto)
         {
-            if (id != menu.Id)
-            {
-                return NotFound();
-            }
+            if (id != dto.Id) return NotFound();
 
             if (ModelState.IsValid)
             {
-                try
-                {
-                    _context.Menus.Update(menu);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!MenuExists(menu.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
+                await _service.UpdateAsync(dto);
                 return RedirectToAction(nameof(Index));
             }
-            return View(menu);
+            
+            return View(dto);
         }
 
-        // GET: Menus/Delete/5
         public async Task<IActionResult> Delete(Guid? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var menu = await _context.Menus
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (menu == null)
-            {
-                return NotFound();
-            }
-
-            return View(menu);
+            if (id == null) return NotFound();
+            var dto = await _service.GetByIdAsync(id.Value);
+            if (dto == null) return NotFound();
+            return View(dto);
         }
 
-        // POST: Menus/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
-            var menu = await _context.Menus.FindAsync(id);
-            if (menu != null)
-            {
-                _context.Menus.Remove(menu);
-            }
-
-            await _context.SaveChangesAsync();
+            await _service.DeleteAsync(id);
             return RedirectToAction(nameof(Index));
-        }
-
-        private bool MenuExists(Guid id)
-        {
-            return _context.Menus.Any(e => e.Id == id);
         }
     }
 }
-
-
-
-

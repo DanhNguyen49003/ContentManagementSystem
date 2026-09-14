@@ -1,4 +1,4 @@
-@model IEnumerable<ContentManagementSystem.ApplicationCore.Entities.Comment>
+@model IEnumerable<ContentManagementSystem.ApplicationCore.DTOs.CommentDto>
 
 @{
     ViewData["Title"] = "Index";
@@ -21,12 +21,8 @@
             <th>
                 @Html.DisplayNameFor(model => model.IsApproved)
             </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Post)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.User)
-            </th>
+            
+            
             <th></th>
         </tr>
     </thead>
@@ -42,12 +38,8 @@
             <td>
                 @Html.DisplayFor(modelItem => item.IsApproved)
             </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Post.Content)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.User.Email)
-            </td>
+            
+            
             <td>
                 <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
                 <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
@@ -57,3 +49,5 @@
 }
     </tbody>
 </table>
+
+
