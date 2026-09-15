@@ -1,20 +1,21 @@
 using System;
-using System.Net;
-using System.Net.Mail;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MimeKit;
+using MailKit.Net.Smtp;
+using MailKit.Security;
 
 namespace ContentManagementSystem.Services
 {
     public class EmailSettings
     {
-        public string SmtpServer { get; set; } = "smtp.gmail.com";
+        public string SmtpServer { get; set; } = "smtp-relay.brevo.com";
         public int SmtpPort { get; set; } = 587;
         public string SenderName { get; set; } = "CMS Portal";
-        public string SenderEmail { get; set; } = "noreply@cmsportal.com";
-        public string Username { get; set; } = "";
+        public string SenderEmail { get; set; } = "danh49003@gmail.com";
+        public string Username { get; set; } = "danh49003@gmail.com";
         public string Password { get; set; } = "";
         public bool EnableSsl { get; set; } = true;
     }
@@ -136,6 +137,64 @@ namespace ContentManagementSystem.Services
                 &copy; {DateTime.Now.Year} CMS Portal. Mọi quyền được bảo lưu.
             </div>
         </div>
+</body>
+</html>";
+        }
+
+        public static string GenerateNewPostApprovalEmail(string postTitle, string authorName, string categoryName, string postSnippet, string reviewUrl)
+        {
+            return $@"
+<!DOCTYPE html>
+<html lang=""vi"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Bài viết mới cần duyệt - CMS Portal</title>
+    <style>
+        body {{ margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155; }}
+        .wrapper {{ width: 100%; table-layout: fixed; background-color: #f8fafc; padding: 40px 0; }}
+        .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0; }}
+        .header {{ background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); padding: 36px 32px; text-align: center; }}
+        .header h1 {{ margin: 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }}
+        .header p {{ margin: 6px 0 0 0; color: #e9d5ff; font-size: 13px; }}
+        .content {{ padding: 36px 32px; }}
+        .greeting {{ font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 16px; }}
+        .message {{ font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 20px; }}
+        .card {{ background-color: #f8fafc; border-left: 4px solid #7c3aed; padding: 18px 20px; border-radius: 8px; margin-bottom: 24px; }}
+        .card h3 {{ margin: 0 0 8px 0; color: #1e293b; font-size: 16px; font-weight: 700; }}
+        .card p {{ margin: 4px 0; font-size: 13px; color: #64748b; }}
+        .btn-wrapper {{ text-align: center; margin: 32px 0; }}
+        .btn {{ display: inline-block; padding: 14px 32px; background-color: #7c3aed; color: #ffffff !important; text-decoration: none; border-radius: 10px; font-size: 14px; font-weight: 700; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3); }}
+        .footer {{ background-color: #f8fafc; padding: 24px 32px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }}
+    </style>
+</head>
+<body>
+    <div class=""wrapper"">
+        <div class=""container"">
+            <div class=""header"">
+                <h1>CMS Portal</h1>
+                <p>Thông Báo Kiểm Duyệt Bài Viết Mới</p>
+            </div>
+            <div class=""content"">
+                <div class=""greeting"">Kính gửi Ban Quản Trị & Ban Kiểm Duyệt QA, 📋</div>
+                <div class=""message"">
+                    Hệ thống vừa tiếp nhận một bài viết mới cần được xem xét và phê duyệt trước khi xuất bản rộng rãi:
+                </div>
+                <div class=""card"">
+                    <h3>{postTitle}</h3>
+                    <p><strong>Tác giả:</strong> {(string.IsNullOrEmpty(authorName) ? "Thành viên hệ thống" : authorName)}</p>
+                    <p><strong>Chuyên mục:</strong> {(string.IsNullOrEmpty(categoryName) ? "Chung" : categoryName)}</p>
+                    <p><strong>Thời gian gửi:</strong> {DateTime.Now.ToString("dd/MM/yyyy HH:mm")}</p>
+                    {(string.IsNullOrEmpty(postSnippet) ? "" : $"<p style=\"margin-top: 8px; color: #475569; font-style: italic;\">\"{postSnippet}\"</p>")}
+                </div>
+                <div class=""btn-wrapper"">
+                    <a href=""{reviewUrl}"" class=""btn"" target=""_blank"">Duyệt bài viết ngay &rarr;</a>
+                </div>
+            </div>
+            <div class=""footer"">
+                &copy; {DateTime.Now.Year} CMS Portal - Ban Quản Trị & Ban Kiểm Duyệt QA.
+            </div>
+        </div>
     </div>
 </body>
 </html>";
@@ -157,37 +216,46 @@ namespace ContentManagementSystem.Services
         {
             _logger.LogInformation("Đang gửi email tới: {Email} | Tiêu đề: {Subject}", email, subject);
 
-            // If username & password are not configured yet, log the email content clearly for development/testing
-            if (string.IsNullOrWhiteSpace(_settings.Username) || string.IsNullOrWhiteSpace(_settings.Password))
+            // Nếu mật khẩu/key chưa được cấu hình thì ghi log lại nội dung
+            if (string.IsNullOrWhiteSpace(_settings.Password))
             {
-                _logger.LogWarning("EmailSettings (Username/Password) chưa được cấu hình SMTP. Email được ghi log thử nghiệm thành công cho {Email}.", email);
+                _logger.LogWarning("EmailSettings (Password/Key) chưa được cấu hình. Nội dung email được ghi log cho {Email}.", email);
                 return;
             }
 
             try
             {
-                using var client = new SmtpClient(_settings.SmtpServer, _settings.SmtpPort)
+                var message = new MimeMessage();
+                message.From.Add(new MailboxAddress(_settings.SenderName, _settings.SenderEmail));
+                message.To.Add(new MailboxAddress(email, email));
+                message.Subject = subject;
+
+                var bodyBuilder = new BodyBuilder
                 {
-                    Credentials = new NetworkCredential(_settings.Username, _settings.Password),
-                    EnableSsl = _settings.EnableSsl
+                    HtmlBody = htmlMessage
                 };
+                message.Body = bodyBuilder.ToMessageBody();
 
-                using var mailMessage = new MailMessage
+                using var client = new SmtpClient();
+                // Brevo port 587 uses STARTTLS, port 465 uses SSL
+                var secureSocketOption = _settings.SmtpPort == 465 
+                    ? SecureSocketOptions.SslOnConnect 
+                    : (_settings.EnableSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.Auto);
+
+                await client.ConnectAsync(_settings.SmtpServer, _settings.SmtpPort, secureSocketOption);
+
+                if (!string.IsNullOrWhiteSpace(_settings.Username) && !string.IsNullOrWhiteSpace(_settings.Password))
                 {
-                    From = new MailAddress(_settings.SenderEmail, _settings.SenderName),
-                    Subject = subject,
-                    Body = htmlMessage,
-                    IsBodyHtml = true
-                };
+                    await client.AuthenticateAsync(_settings.Username, _settings.Password);
+                }
 
-                mailMessage.To.Add(email);
-
-                await client.SendMailAsync(mailMessage);
-                _logger.LogInformation("Gửi email thành công tới {Email}", email);
+                await client.SendAsync(message);
+                await client.DisconnectAsync(true);
+                _logger.LogInformation("Gửi email thành công tới {Email} qua {Server}:{Port}", email, _settings.SmtpServer, _settings.SmtpPort);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi khi gửi email qua SMTP tới {Email}: {Message}", email, ex.Message);
+                _logger.LogError(ex, "Lỗi khi gửi email tới {Email}: {Message}", email, ex.Message);
             }
         }
     }

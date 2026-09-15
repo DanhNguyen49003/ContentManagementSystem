@@ -12,10 +12,9 @@ namespace ContentManagementSystem.Seeders
         public static readonly string[] Roles = new[]
         {
             "Admin",
-            "Editor",
-            "Author",
-            "Moderator",
-            "Subscriber"
+            "QA Manager",
+            "QA Coordinator",
+            "Customer"
         };
 
         public static async Task SeedAsync(IHost host)
@@ -35,17 +34,16 @@ namespace ContentManagementSystem.Seeders
                     {
                         Name = roleName,
                         NormalizedName = roleName.ToUpper(),
-                        Avatar = $"role-{roleName.ToLower()}"
+                        Avatar = $"role-{roleName.ToLower().Replace(" ", "-")}"
                     });
                 }
             }
 
-            // 2. Seed Default Users for each role
+            // 2. Seed Default Users for each of the 4 roles
             await SeedUserAsync(userManager, "admin@cms.com", "Admin@123", "Quản trị viên", "Admin");
-            await SeedUserAsync(userManager, "editor@cms.com", "Editor@123", "Biên tập viên", "Editor");
-            await SeedUserAsync(userManager, "author@cms.com", "Author@123", "Tác giả bài viết", "Author");
-            await SeedUserAsync(userManager, "moderator@cms.com", "Moderator@123", "Kiểm duyệt viên", "Moderator");
-            await SeedUserAsync(userManager, "user@cms.com", "User@123", "Độc giả thành viên", "Subscriber");
+            await SeedUserAsync(userManager, "qamanager@cms.com", "Manager@123", "Trưởng ban QA", "QA Manager");
+            await SeedUserAsync(userManager, "qacoordinator@cms.com", "Coord@123", "Điều phối viên QA", "QA Coordinator");
+            await SeedUserAsync(userManager, "customer@cms.com", "Customer@123", "Khách hàng", "Customer");
         }
 
         private static async Task SeedUserAsync(

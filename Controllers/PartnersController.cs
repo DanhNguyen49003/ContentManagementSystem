@@ -9,7 +9,7 @@ using ContentManagementSystem.Service.Interface;
 
 namespace ContentManagementSystem.Controllers
 {
-    [Authorize(Roles = "Admin,Editor")]
+    [Authorize(Roles = "Admin,QA Manager,QA Coordinator")]
     public class PartnersController : Controller
     {
         private readonly IPartnerService _service;

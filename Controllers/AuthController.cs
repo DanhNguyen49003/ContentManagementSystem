@@ -10,9 +10,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using ContentManagementSystem.ApplicationCore.DTOs;
 using ContentManagementSystem.ApplicationCore.Entities.Identity;
 using ContentManagementSystem.Seeders;
 using ContentManagementSystem.Services;
+using ContentManagementSystem.Services.ApiClients;
 using ContentManagementSystem.ViewModels.Auth;
 
 namespace ContentManagementSystem.Controllers
@@ -22,6 +24,7 @@ namespace ContentManagementSystem.Controllers
         private readonly UserManager<ContentUser> _userManager;
         private readonly SignInManager<ContentUser> _signInManager;
         private readonly RoleManager<ContentRole> _roleManager;
+        private readonly IApiClient _apiClient;
         private readonly IEmailSender _emailSender;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly ILogger<AuthController> _logger;
@@ -30,6 +33,7 @@ namespace ContentManagementSystem.Controllers
             UserManager<ContentUser> userManager,
             SignInManager<ContentUser> signInManager,
             RoleManager<ContentRole> roleManager,
+            IApiClient apiClient,
             IEmailSender emailSender,
             IWebHostEnvironment webHostEnvironment,
             ILogger<AuthController> logger)
@@ -37,6 +41,7 @@ namespace ContentManagementSystem.Controllers
             _userManager = userManager;
             _signInManager = signInManager;
             _roleManager = roleManager;
+            _apiClient = apiClient;
             _emailSender = emailSender;
             _webHostEnvironment = webHostEnvironment;
             _logger = logger;
@@ -72,17 +77,31 @@ namespace ContentManagementSystem.Controllers
                 return View(model);
             }
 
-            var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null)
+            // 1. Xác thực thông tin đăng nhập và lấy JWT Token qua Web API
+            var loginRequest = new LoginRequestDto
             {
-                ModelState.AddModelError(string.Empty, "Email hoặc mật khẩu không chính xác.");
-                return View(model);
-            }
+                Email = model.Email,
+                Password = model.Password
+            };
 
-            // Kiểm tra trạng thái khóa tài khoản
-            if (await _userManager.IsLockedOutAsync(user))
+            var loginResponse = await _apiClient.PostAsync<LoginRequestDto, LoginResponseDto>("api/auth/login", loginRequest);
+
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null || loginResponse == null)
             {
-                ModelState.AddModelError(string.Empty, "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
+                if (user != null && !await _userManager.IsEmailConfirmedAsync(user))
+                {
+                    ModelState.AddModelError(string.Empty, "Tài khoản của bạn chưa được kích hoạt qua email. Vui lòng kiểm tra hộp thư (hoặc thư mục Spam) để nhấn vào liên kết kích hoạt trước khi đăng nhập.");
+                    return View(model);
+                }
+
+                if (user != null && await _userManager.IsLockedOutAsync(user))
+                {
+                    ModelState.AddModelError(string.Empty, "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
+                    return View(model);
+                }
+
+                ModelState.AddModelError(string.Empty, "Email hoặc mật khẩu không chính xác.");
                 return View(model);
             }
 
@@ -94,7 +113,20 @@ namespace ContentManagementSystem.Controllers
 
             if (result.Succeeded)
             {
-                _logger.LogInformation("Người dùng {Email} đăng nhập thành công.", model.Email);
+                // Lưu token JWT từ API vào Identity claim "access_token" để ApiClient tự động gửi Bearer token
+                if (!string.IsNullOrEmpty(loginResponse.Token))
+                {
+                    var userClaims = await _userManager.GetClaimsAsync(user);
+                    var oldTokenClaim = userClaims.FirstOrDefault(c => c.Type == "access_token");
+                    if (oldTokenClaim != null)
+                    {
+                        await _userManager.RemoveClaimAsync(user, oldTokenClaim);
+                    }
+                    await _userManager.AddClaimAsync(user, new System.Security.Claims.Claim("access_token", loginResponse.Token));
+                    await _signInManager.RefreshSignInAsync(user);
+                }
+
+                _logger.LogInformation("Người dùng {Email} đăng nhập thành công qua Web API.", model.Email);
                 if (Url.IsLocalUrl(returnUrl))
                 {
                     return Redirect(returnUrl);
@@ -147,7 +179,7 @@ namespace ContentManagementSystem.Controllers
                 Email = model.Email,
                 FullName = model.FullName,
                 CreatedAt = DateTime.UtcNow,
-                EmailConfirmed = true // Cho phép đăng nhập ngay hoặc kích hoạt qua email
+                EmailConfirmed = false // Bắt buộc kích hoạt qua email Brevo
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
@@ -155,10 +187,10 @@ namespace ContentManagementSystem.Controllers
             {
                 _logger.LogInformation("Tài khoản mới được tạo: {Email}", user.Email);
 
-                // Mặc định gán vai trò Subscriber cho tài khoản đăng ký mới
-                await _userManager.AddToRoleAsync(user, "Subscriber");
+                // Mặc định gán vai trò Customer cho tài khoản đăng ký mới
+                await _userManager.AddToRoleAsync(user, "Customer");
 
-                // Tạo token xác nhận email và gửi thư
+                // Tạo token xác nhận email và gửi thư qua Brevo
                 try
                 {
                     var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
@@ -177,7 +209,7 @@ namespace ContentManagementSystem.Controllers
                     _logger.LogError(ex, "Lỗi khi gửi email xác nhận cho {Email}", user.Email);
                 }
 
-                TempData["SuccessMessage"] = "Đăng ký tài khoản thành công! Bạn có thể đăng nhập ngay.";
+                TempData["SuccessMessage"] = "Đăng ký tài khoản thành công! Chúng tôi đã gửi một email xác thực đến địa chỉ của bạn. Vui lòng kiểm tra hộp thư (hoặc thư mục Spam) và nhấn vào liên kết để kích hoạt tài khoản trước khi đăng nhập.";
                 return RedirectToAction(nameof(Login));
             }
 
@@ -360,114 +392,18 @@ namespace ContentManagementSystem.Controllers
         // GET: /Auth/Profile
         [Authorize]
         [HttpGet]
-        public async Task<IActionResult> Profile()
+        public IActionResult Profile()
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return NotFound("Không tìm thấy thông tin tài khoản.");
-            }
-
-            var roles = await _userManager.GetRolesAsync(user);
-
-            var model = new UserProfileViewModel
-            {
-                Id = user.Id,
-                Email = user.Email ?? string.Empty,
-                FullName = user.FullName ?? string.Empty,
-                PhoneNumber = user.PhoneNumber,
-                Avatar = user.Avatar,
-                Roles = roles,
-                CreatedAt = user.CreatedAt
-            };
-
-            return View(model);
+            return RedirectToAction("Index", "Profile");
         }
 
         // POST: /Auth/Profile
         [Authorize]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Profile(UserProfileViewModel model)
+        public IActionResult Profile(UserProfileViewModel model)
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return NotFound("Không tìm thấy thông tin tài khoản.");
-            }
-
-            if (!ModelState.IsValid)
-            {
-                model.Email = user.Email ?? string.Empty;
-                model.Roles = await _userManager.GetRolesAsync(user);
-                model.CreatedAt = user.CreatedAt;
-                return View(model);
-            }
-
-            // Xử lý upload file ảnh đại diện từ máy người dùng nếu có
-            if (model.AvatarFile != null && model.AvatarFile.Length > 0)
-            {
-                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
-                var ext = Path.GetExtension(model.AvatarFile.FileName).ToLowerInvariant();
-                if (!allowedExtensions.Contains(ext))
-                {
-                    ModelState.AddModelError("AvatarFile", "Chỉ chấp nhận file ảnh có định dạng .jpg, .jpeg, .png, .webp, .gif");
-                    model.Email = user.Email ?? string.Empty;
-                    model.Roles = await _userManager.GetRolesAsync(user);
-                    model.CreatedAt = user.CreatedAt;
-                    return View(model);
-                }
-
-                if (model.AvatarFile.Length > 5 * 1024 * 1024)
-                {
-                    ModelState.AddModelError("AvatarFile", "Kích thước ảnh đại diện không được vượt quá 5MB.");
-                    model.Email = user.Email ?? string.Empty;
-                    model.Roles = await _userManager.GetRolesAsync(user);
-                    model.CreatedAt = user.CreatedAt;
-                    return View(model);
-                }
-
-                var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads", "avatars");
-                if (!Directory.Exists(uploadsFolder))
-                {
-                    Directory.CreateDirectory(uploadsFolder);
-                }
-
-                var fileName = $"avatar_{user.Id}_{Guid.NewGuid():N}{ext}";
-                var filePath = Path.Combine(uploadsFolder, fileName);
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    await model.AvatarFile.CopyToAsync(stream);
-                }
-
-                user.Avatar = $"/uploads/avatars/{fileName}";
-            }
-            else if (!string.IsNullOrWhiteSpace(model.Avatar))
-            {
-                user.Avatar = model.Avatar.Trim();
-            }
-
-            user.FullName = model.FullName;
-            user.PhoneNumber = model.PhoneNumber;
-
-            var result = await _userManager.UpdateAsync(user);
-            if (result.Succeeded)
-            {
-                await _signInManager.RefreshSignInAsync(user);
-                TempData["SuccessMessage"] = "Cập nhật hồ sơ cá nhân và ảnh đại diện thành công!";
-                return RedirectToAction(nameof(Profile));
-            }
-
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
-
-            model.Email = user.Email ?? string.Empty;
-            model.Roles = await _userManager.GetRolesAsync(user);
-            model.CreatedAt = user.CreatedAt;
-
-            return View(model);
+            return RedirectToAction("Index", "Profile");
         }
 
         // GET: /Auth/ChangePassword
@@ -586,7 +522,7 @@ namespace ContentManagementSystem.Controllers
                 Email = user.Email ?? string.Empty,
                 FullName = user.FullName,
                 CurrentRoles = currentRoles,
-                SelectedRole = currentRoles.FirstOrDefault() ?? "Subscriber",
+                SelectedRole = currentRoles.FirstOrDefault() ?? "Customer",
                 AvailableRoles = IdentityDataSeeder.Roles.ToList()
             };
 
@@ -710,11 +646,10 @@ namespace ContentManagementSystem.Controllers
 
             var roleDescriptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "Admin", "Toàn quyền quản trị hệ thống: Quản lý người dùng, phân quyền vai trò, cài đặt giao diện, bài viết và bảo mật." },
-                { "Editor", "Biên tập viên: Quản lý toàn bộ bài viết, chuyên mục, trang tĩnh, duyệt bài và xuất bản nội dung." },
-                { "Author", "Tác giả: Soạn thảo, chỉnh sửa bài viết của chính mình và gửi yêu cầu phê duyệt nội dung." },
-                { "Moderator", "Kiểm duyệt viên: Quản lý bình luận người dùng, xử lý phản hồi liên hệ, FAQ và tương tác độc giả." },
-                { "Subscriber", "Độc giả thành viên: Đọc bài viết, để lại bình luận và đăng ký nhận bản tin." }
+                { "Admin", "Quản trị viên: Toàn quyền quản trị hệ thống, người dùng, phân quyền vai trò, cài đặt giao diện, bài viết và bảo mật." },
+                { "QA Manager", "Trưởng ban QA: Phê duyệt bài viết, kiểm soát chất lượng nội dung, quản lý tiêu chuẩn xuất bản và báo cáo." },
+                { "QA Coordinator", "Điều phối viên QA: Tiếp nhận, đánh giá bài viết mới từ cộng đồng/khách hàng và điều phối quy trình duyệt." },
+                { "Customer", "Khách hàng / Thành viên: Tạo và đóng góp bài viết, gửi bài chờ kiểm duyệt và quản lý hồ sơ cá nhân." }
             };
 
             foreach (var role in roles)

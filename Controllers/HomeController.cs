@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace ContentManagementSystem.Controllers
 {
-    [Authorize(Roles = "Admin,Editor,Author,Moderator,Subscriber")]
+    [Authorize]
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;

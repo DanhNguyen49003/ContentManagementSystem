@@ -33,7 +33,7 @@
     <!-- Welcome banner -->
     <div class="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 rounded-2xl p-6 text-white shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
         <div class="flex items-center gap-4">
-            <a asp-controller="Auth" asp-action="Profile" title="Chỉnh sửa ảnh đại diện và hồ sơ" class="relative group flex-shrink-0">
+            <a asp-controller="Profile" asp-action="Index" title="Chỉnh sửa ảnh đại diện và hồ sơ" class="relative group flex-shrink-0">
                 <img src="@userAvatar" alt="@displayName" class="w-16 h-16 rounded-2xl object-cover ring-4 ring-white/30 shadow-md bg-white group-hover:scale-105 transition-transform" onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name=@(Uri.EscapeDataString(displayName))&background=ffffff&color=2563eb&bold=true';" />
                 <span class="absolute -bottom-1 -right-1 bg-emerald-500 border-2 border-white w-4 h-4 rounded-full" title="Online"></span>
             </a>

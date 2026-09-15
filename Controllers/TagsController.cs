@@ -9,7 +9,7 @@ using ContentManagementSystem.Service.Interface;
 
 namespace ContentManagementSystem.Controllers
 {
-    [Authorize(Roles = "Admin,Editor,Author")]
+    [Authorize(Roles = "Admin,QA Manager,QA Coordinator,Customer")]
     public class TagsController : Controller
     {
         private readonly ITagService _service;

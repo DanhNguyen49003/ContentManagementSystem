@@ -20,6 +20,7 @@ builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("Emai
 builder.Services.AddTransient<IEmailSender, EmailSender>();
 
 // ===== HttpClient & API Client Configuration =====
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient<ContentManagementSystem.Services.ApiClients.IApiClient, ContentManagementSystem.Services.ApiClients.ApiClient>();
 
 // ===== DI: Service Layer (Gọi 100% qua RESTful Web API) =====

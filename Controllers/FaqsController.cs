@@ -9,7 +9,7 @@ using ContentManagementSystem.Service.Interface;
 
 namespace ContentManagementSystem.Controllers
 {
-    [Authorize(Roles = "Admin,Editor,Moderator")]
+    [Authorize(Roles = "Admin,QA Manager,QA Coordinator")]
     public class FaqsController : Controller
     {
         private readonly IFaqService _service;

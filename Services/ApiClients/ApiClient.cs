@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -30,28 +31,27 @@ namespace ContentManagementSystem.Services.ApiClients
     public class ApiClient : IApiClient
     {
         private readonly HttpClient _httpClient;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILogger<ApiClient> _logger;
         private readonly JsonSerializerOptions _jsonOptions;
+        private readonly string _systemKey;
 
-        public ApiClient(HttpClient httpClient, IConfiguration configuration, ILogger<ApiClient> logger)
+        public ApiClient(
+            HttpClient httpClient,
+            IHttpContextAccessor httpContextAccessor,
+            IConfiguration configuration,
+            ILogger<ApiClient> logger)
         {
             _httpClient = httpClient;
+            _httpContextAccessor = httpContextAccessor;
             _logger = logger;
 
             var baseUrl = configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5123";
-            var systemKey = configuration["ApiSettings:SystemKey"] ?? "CMSPortalSecretKey2026!#";
+            _systemKey = configuration["ApiSettings:SystemKey"] ?? "CMSPortalSecretKey2026!#";
 
             if (!_httpClient.BaseAddress?.ToString().Contains("http") ?? true)
             {
                 _httpClient.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
-            }
-
-            _httpClient.DefaultRequestHeaders.Accept.Clear();
-            _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            
-            if (!_httpClient.DefaultRequestHeaders.Contains("X-System-Key"))
-            {
-                _httpClient.DefaultRequestHeaders.Add("X-System-Key", systemKey);
             }
 
             _jsonOptions = new JsonSerializerOptions
@@ -60,11 +60,32 @@ namespace ContentManagementSystem.Services.ApiClients
             };
         }
 
+        private HttpRequestMessage CreateRequest(HttpMethod method, string endpoint)
+        {
+            var request = new HttpRequestMessage(method, endpoint);
+            request.Headers.Accept.Clear();
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            request.Headers.Add("X-System-Key", _systemKey);
+
+            var context = _httpContextAccessor?.HttpContext;
+            if (context?.User?.Identity?.IsAuthenticated == true)
+            {
+                var token = context.User.FindFirst("access_token")?.Value;
+                if (!string.IsNullOrEmpty(token))
+                {
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                }
+            }
+
+            return request;
+        }
+
         public async Task<T?> GetAsync<T>(string endpoint)
         {
             try
             {
-                var response = await _httpClient.GetAsync(endpoint);
+                using var request = CreateRequest(HttpMethod.Get, endpoint);
+                var response = await _httpClient.SendAsync(request);
                 if (!response.IsSuccessStatusCode)
                 {
                     _logger.LogWarning("API GET {Endpoint} trả về mã lỗi {StatusCode}", endpoint, response.StatusCode);
@@ -72,8 +93,6 @@ namespace ContentManagementSystem.Services.ApiClients
                 }
 
                 var content = await response.Content.ReadAsStringAsync();
-                
-                // Thử giải mã định dạng bọc ApiResponseEnvelope<T>
                 try
                 {
                     var envelope = JsonSerializer.Deserialize<ApiResponseEnvelope<T>>(content, _jsonOptions);
@@ -82,10 +101,7 @@ namespace ContentManagementSystem.Services.ApiClients
                         return envelope.Data;
                     }
                 }
-                catch
-                {
-                    // Fallback sang giải mã trực tiếp T
-                }
+                catch { }
 
                 return JsonSerializer.Deserialize<T>(content, _jsonOptions);
             }
@@ -100,7 +116,9 @@ namespace ContentManagementSystem.Services.ApiClients
         {
             try
             {
-                var response = await _httpClient.PostAsJsonAsync(endpoint, data, _jsonOptions);
+                using var request = CreateRequest(HttpMethod.Post, endpoint);
+                request.Content = JsonContent.Create(data, options: _jsonOptions);
+                var response = await _httpClient.SendAsync(request);
                 return response.IsSuccessStatusCode;
             }
             catch (Exception ex)
@@ -114,7 +132,9 @@ namespace ContentManagementSystem.Services.ApiClients
         {
             try
             {
-                var response = await _httpClient.PostAsJsonAsync(endpoint, data, _jsonOptions);
+                using var request = CreateRequest(HttpMethod.Post, endpoint);
+                request.Content = JsonContent.Create(data, options: _jsonOptions);
+                var response = await _httpClient.SendAsync(request);
                 if (!response.IsSuccessStatusCode)
                 {
                     return default;
@@ -144,7 +164,9 @@ namespace ContentManagementSystem.Services.ApiClients
         {
             try
             {
-                var response = await _httpClient.PutAsJsonAsync(endpoint, data, _jsonOptions);
+                using var request = CreateRequest(HttpMethod.Put, endpoint);
+                request.Content = JsonContent.Create(data, options: _jsonOptions);
+                var response = await _httpClient.SendAsync(request);
                 return response.IsSuccessStatusCode;
             }
             catch (Exception ex)
@@ -158,7 +180,8 @@ namespace ContentManagementSystem.Services.ApiClients
         {
             try
             {
-                var response = await _httpClient.DeleteAsync(endpoint);
+                using var request = CreateRequest(HttpMethod.Delete, endpoint);
+                var response = await _httpClient.SendAsync(request);
                 return response.IsSuccessStatusCode;
             }
             catch (Exception ex)
@@ -172,7 +195,7 @@ namespace ContentManagementSystem.Services.ApiClients
         {
             try
             {
-                var request = new HttpRequestMessage(HttpMethod.Patch, endpoint);
+                using var request = CreateRequest(HttpMethod.Patch, endpoint);
                 var response = await _httpClient.SendAsync(request);
                 return response.IsSuccessStatusCode;
             }

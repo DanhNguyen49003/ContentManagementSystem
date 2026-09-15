@@ -9,7 +9,7 @@ using ContentManagementSystem.Service.Interface;
 
 namespace ContentManagementSystem.Controllers
 {
-    [Authorize(Roles = "Admin,Moderator")]
+    [Authorize(Roles = "Admin,QA Manager,QA Coordinator")]
     public class TestimonialsController : Controller
     {
         private readonly ITestimonialService _service;

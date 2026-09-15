@@ -46,11 +46,11 @@
                         var isChecked = role.Equals(Model.SelectedRole, StringComparison.OrdinalIgnoreCase);
                         var roleDesc = role switch
                         {
-                            "Admin" => "Toàn quyền quản trị: Quản lý người dùng, phân quyền vai trò, bài viết, menu, banner, cài đặt bảo mật.",
-                            "Editor" => "Biên tập viên: Quản lý toàn bộ bài viết, chuyên mục, trang tĩnh, duyệt và xuất bản nội dung.",
-                            "Author" => "Tác giả: Tạo và chỉnh sửa bài viết của chính mình, gửi bài chờ kiểm duyệt.",
-                            "Moderator" => "Kiểm duyệt viên: Quản lý bình luận, giải đáp FAQ, trả lời liên hệ và phản hồi độc giả.",
-                            _ => "Độc giả thành viên: Đọc bài viết, đăng bình luận và nhận bản tin thông báo."
+                            "Admin" => "Toàn quyền quản trị: Quản lý người dùng, phân quyền vai trò, cài đặt giao diện, bài viết và bảo mật.",
+                            "QA Manager" => "Trưởng ban QA: Phê duyệt bài viết, kiểm soát chất lượng nội dung, quản lý tiêu chuẩn xuất bản và báo cáo.",
+                            "QA Coordinator" => "Điều phối viên QA: Tiếp nhận, đánh giá bài viết mới từ khách hàng và điều phối quy trình duyệt.",
+                            "Customer" => "Khách hàng / Thành viên: Tạo và đóng góp bài viết, gửi bài chờ kiểm duyệt và quản lý thông tin cá nhân.",
+                            _ => "Người dùng hệ thống."
                         };
 
                         <label class="flex items-start gap-3 p-4 border rounded-xl cursor-pointer transition-all hover:bg-gray-50/80 @(isChecked ? "border-blue-500 bg-blue-50/20 ring-1 ring-blue-500/30" : "border-gray-200")">

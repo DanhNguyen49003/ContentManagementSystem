@@ -7,7 +7,7 @@ using ContentManagementSystem.Service.Interface;
 
 namespace ContentManagementSystem.Controllers
 {
-    [Authorize(Roles = "Admin,Moderator")]
+    [Authorize(Roles = "Admin,QA Manager,QA Coordinator")]
     public class NewsletterSubscribersController : Controller
     {
         private readonly INewsletterSubscriberService _service;

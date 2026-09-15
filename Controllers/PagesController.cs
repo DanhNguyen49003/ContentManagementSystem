@@ -9,7 +9,7 @@ using ContentManagementSystem.Service.Interface;
 
 namespace ContentManagementSystem.Controllers
 {
-    [Authorize(Roles = "Admin,Editor")]
+    [Authorize(Roles = "Admin,QA Manager")]
     public class PagesController : Controller
     {
         private readonly IPageService _service;
