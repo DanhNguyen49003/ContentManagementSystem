@@ -10,6 +10,9 @@
     ContentUser? currentUser = null;
     string displayName = User.Identity?.Name ?? "Bạn";
     string userAvatar = "";
+    bool isAdmin = false;
+    bool isQAManager = false;
+    bool isQACoordinator = false;
 
     if (SignInManager.IsSignedIn(User))
     {
@@ -20,6 +23,11 @@
                 ? currentUser.FullName 
                 : (!string.IsNullOrWhiteSpace(currentUser.UserName) ? currentUser.UserName : (currentUser.Email ?? "Bạn"));
             userAvatar = currentUser.Avatar ?? "";
+
+            var userRoles = await UserManager.GetRolesAsync(currentUser);
+            isAdmin = userRoles.Contains("Admin", StringComparer.OrdinalIgnoreCase) || currentUser.Email?.Equals("admin@cms.com", StringComparison.OrdinalIgnoreCase) == true;
+            isQAManager = userRoles.Contains("QA Manager", StringComparer.OrdinalIgnoreCase);
+            isQACoordinator = userRoles.Contains("QA Coordinator", StringComparer.OrdinalIgnoreCase);
         }
     }
 
@@ -49,10 +57,13 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 Viết bài mới
             </a>
-            <a asp-controller="Categories" asp-action="Create" class="inline-flex items-center gap-2 bg-blue-500 bg-opacity-30 hover:bg-opacity-40 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-all border border-blue-400 border-opacity-30">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-                Thêm danh mục
-            </a>
+            @if (isAdmin || isQAManager || isQACoordinator)
+            {
+                <a asp-controller="Categories" asp-action="Create" class="inline-flex items-center gap-2 bg-blue-500 bg-opacity-30 hover:bg-opacity-40 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-all border border-blue-400 border-opacity-30">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                    Thêm danh mục
+                </a>
+            }
         </div>
     </div>
 
@@ -227,5 +238,58 @@
             </div>
         </div>
     </div>
+
+    @if (isAdmin || isQAManager)
+    {
+        <!-- System & User Management Hub (Admin & QA Manager) -->
+        <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-lg border border-slate-800">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
+                <div>
+                    <h3 class="font-bold text-white text-lg flex items-center gap-2">
+                        <span class="w-3 h-3 bg-rose-500 rounded-full animate-ping"></span>
+                        Hệ thống & Phân quyền Quản trị
+                    </h3>
+                    <p class="text-xs text-slate-300 mt-0.5">Quản lý toàn bộ tài khoản người dùng, phân vai trò, duyệt email và bảo mật</p>
+                </div>
+                <span class="inline-flex items-center text-[11px] font-bold px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 self-start sm:self-auto">
+                    Khu vực Quản trị viên
+                </span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Quản lý Người dùng -->
+                <a asp-controller="Auth" asp-action="Users" class="p-4 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all flex items-center justify-between group">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-11 h-11 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-white text-base group-hover:text-rose-300 transition-colors">Quản lý Người dùng & Phân quyền</h4>
+                            <p class="text-xs text-slate-300 mt-0.5">Danh sách người dùng, đổi vai trò, khóa/mở khóa & kích hoạt email</p>
+                        </div>
+                    </div>
+                    <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white group-hover:translate-x-1 transition-all">
+                        &rarr;
+                    </div>
+                </a>
+
+                <!-- Danh sách Vai trò -->
+                <a asp-controller="Auth" asp-action="Roles" class="p-4 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all flex items-center justify-between group">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-11 h-11 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-white text-base group-hover:text-blue-300 transition-colors">Danh sách Vai trò Hệ thống</h4>
+                            <p class="text-xs text-slate-300 mt-0.5">Xem 4 vai trò: Admin, QA Manager, QA Coordinator, Customer</p>
+                        </div>
+                    </div>
+                    <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white group-hover:translate-x-1 transition-all">
+                        &rarr;
+                    </div>
+                </a>
+            </div>
+        </div>
+    }
 </div>
 

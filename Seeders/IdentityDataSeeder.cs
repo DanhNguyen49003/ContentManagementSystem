@@ -1,9 +1,11 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ContentManagementSystem.ApplicationCore.Entities.Identity;
+using ContentManagementSystem.DataLayer;
 
 namespace ContentManagementSystem.Seeders
 {
@@ -44,6 +46,19 @@ namespace ContentManagementSystem.Seeders
             await SeedUserAsync(userManager, "qamanager@cms.com", "Manager@123", "Trưởng ban QA", "QA Manager");
             await SeedUserAsync(userManager, "qacoordinator@cms.com", "Coord@123", "Điều phối viên QA", "QA Coordinator");
             await SeedUserAsync(userManager, "customer@cms.com", "Customer@123", "Khách hàng", "Customer");
+
+            // 3. Chuẩn hóa tên chuyên mục có dấu tiếng Việt chuẩn
+            var contentDb = services.GetService<ContentManageDbContext>();
+            if (contentDb != null)
+            {
+                var congNghe = await contentDb.Categories.FirstOrDefaultAsync(c => c.Name == "Cong Nghe");
+                if (congNghe != null)
+                {
+                    congNghe.Name = "Công nghệ";
+                    congNghe.Description = "Chuyên mục tin tức công nghệ, đời sống số";
+                    await contentDb.SaveChangesAsync();
+                }
+            }
         }
 
         private static async Task SeedUserAsync(

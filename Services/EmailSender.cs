@@ -13,6 +13,7 @@ namespace ContentManagementSystem.Services
     {
         public string SmtpServer { get; set; } = "smtp-relay.brevo.com";
         public int SmtpPort { get; set; } = 587;
+        public int Port { get => SmtpPort; set => SmtpPort = value; }
         public string SenderName { get; set; } = "CMS Portal";
         public string SenderEmail { get; set; } = "danh49003@gmail.com";
         public string Username { get; set; } = "danh49003@gmail.com";
@@ -237,6 +238,9 @@ namespace ContentManagementSystem.Services
                 message.Body = bodyBuilder.ToMessageBody();
 
                 using var client = new SmtpClient();
+                client.Timeout = 10000; // 10 giây timeout tránh treo luồng web
+                client.ServerCertificateValidationCallback = (s, c, h, e) => true;
+
                 // Brevo port 587 uses STARTTLS, port 465 uses SSL
                 var secureSocketOption = _settings.SmtpPort == 465 
                     ? SecureSocketOptions.SslOnConnect 
@@ -255,7 +259,24 @@ namespace ContentManagementSystem.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi khi gửi email tới {Email}: {Message}", email, ex.Message);
+                _logger.LogError(ex, @"
+=======================================================================
+❌ [EmailSender] LỖI GỬI EMAIL TỚI: {Email}
+Mã lỗi: {Message}
+Máy chủ SMTP: {Server}:{Port} | Tài khoản: {Username}
+-----------------------------------------------------------------------
+💡 NGUYÊN NHÂN & CÁCH KHẮC PHỤC:
+1. Nếu dùng Brevo (smtp-relay.brevo.com:587):
+   - Mã '535 Authentication failed' nghĩa là Login hoặc SMTP Key không khớp.
+   - Hãy vào: https://app.brevo.com/settings/keys/smtp
+   - Kiểm tra đúng giá trị tại ô 'Login' (thường là mã xxx@smtp-brevo.com hoặc email đăng ký).
+   - Nhấn 'Generate a new SMTP key' và copy key 'xsmtpsib-...' dán vào Password trong appsettings.json.
+2. Nếu dùng Gmail (Khuyên dùng - cực kỳ ổn định):
+   - SmtpServer: smtp.gmail.com | SmtpPort: 587 | EnableSsl: true
+   - Username: dia_chi_gmail_cua_ban@gmail.com
+   - Password: Mật khẩu ứng dụng 16 ký tự (tạo tại myaccount.google.com/apppasswords)
+=======================================================================",
+                    email, ex.Message, _settings.SmtpServer, _settings.SmtpPort, _settings.Username);
             }
         }
     }

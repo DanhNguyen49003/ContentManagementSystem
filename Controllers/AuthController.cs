@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using ContentManagementSystem.ApplicationCore.DTOs;
 using ContentManagementSystem.ApplicationCore.Entities.Identity;
 using ContentManagementSystem.Seeders;
@@ -26,6 +27,7 @@ namespace ContentManagementSystem.Controllers
         private readonly RoleManager<ContentRole> _roleManager;
         private readonly IApiClient _apiClient;
         private readonly IEmailSender _emailSender;
+        private readonly EmailSettings _emailSettings;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly ILogger<AuthController> _logger;
 
@@ -35,6 +37,7 @@ namespace ContentManagementSystem.Controllers
             RoleManager<ContentRole> roleManager,
             IApiClient apiClient,
             IEmailSender emailSender,
+            IOptions<EmailSettings> emailOptions,
             IWebHostEnvironment webHostEnvironment,
             ILogger<AuthController> logger)
         {
@@ -43,6 +46,7 @@ namespace ContentManagementSystem.Controllers
             _roleManager = roleManager;
             _apiClient = apiClient;
             _emailSender = emailSender;
+            _emailSettings = emailOptions.Value;
             _webHostEnvironment = webHostEnvironment;
             _logger = logger;
         }
@@ -201,8 +205,16 @@ namespace ContentManagementSystem.Controllers
                         new { userId = user.Id, code = encodedToken },
                         protocol: Request.Scheme);
 
+                    _logger.LogInformation(@"
+=======================================================================
+🔗 [XÁC NHẬN TÀI KHOẢN] ĐƯỜNG DẪN KÍCH HOẠT CHO: {Email}
+{Url}
+=======================================================================", user.Email, callbackUrl);
+
                     var emailHtml = EmailTemplateHelper.GenerateConfirmationEmail(callbackUrl ?? "", user.FullName ?? "");
                     await _emailSender.SendEmailAsync(user.Email!, "Xác nhận kích hoạt tài khoản - CMS Portal", emailHtml);
+
+                    TempData["DevConfirmLink"] = callbackUrl;
                 }
                 catch (Exception ex)
                 {
@@ -307,8 +319,16 @@ namespace ContentManagementSystem.Controllers
                         new { code = encodedToken, email = model.Email },
                         protocol: Request.Scheme);
 
+                    _logger.LogInformation(@"
+=======================================================================
+🔑 [KHÔI PHỤC MẬT KHẨU] ĐƯỜNG DẪN ĐẶT LẠI MẬT KHẨU CHO: {Email}
+{Url}
+=======================================================================", model.Email, callbackUrl);
+
                     var emailHtml = EmailTemplateHelper.GenerateResetPasswordEmail(callbackUrl ?? "", user.FullName ?? user.Email ?? "");
                     await _emailSender.SendEmailAsync(model.Email, "Yêu cầu đặt lại mật khẩu - CMS Portal", emailHtml);
+
+                    TempData["DevResetLink"] = callbackUrl;
                 }
                 catch (Exception ex)
                 {
@@ -452,7 +472,7 @@ namespace ContentManagementSystem.Controllers
         // ==========================================
 
         // GET: /Auth/Users
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,QA Manager")]
         [HttpGet]
         public async Task<IActionResult> Users(string? search = null, string? role = null)
         {
@@ -499,7 +519,7 @@ namespace ContentManagementSystem.Controllers
         }
 
         // GET: /Auth/AssignRole/5
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,QA Manager")]
         [HttpGet]
         public async Task<IActionResult> AssignRole(string id)
         {
@@ -530,7 +550,7 @@ namespace ContentManagementSystem.Controllers
         }
 
         // POST: /Auth/AssignRole
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,QA Manager")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AssignRole(AssignRoleViewModel model)
@@ -571,7 +591,7 @@ namespace ContentManagementSystem.Controllers
         }
 
         // POST: /Auth/ToggleLock/5
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,QA Manager")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleLock(string id)
@@ -604,8 +624,34 @@ namespace ContentManagementSystem.Controllers
             return RedirectToAction(nameof(Users));
         }
 
+        // POST: /Auth/ConfirmUserEmail/5
+        [Authorize(Roles = "Admin,QA Manager")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmUserEmail(string id)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+            {
+                return NotFound("Không tìm thấy người dùng.");
+            }
+
+            user.EmailConfirmed = true;
+            var result = await _userManager.UpdateAsync(user);
+            if (result.Succeeded)
+            {
+                TempData["SuccessMessage"] = $"Đã kích hoạt email xác nhận cho tài khoản {user.Email} thành công!";
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "Không thể cập nhật trạng thái email cho tài khoản này.";
+            }
+
+            return RedirectToAction(nameof(Users));
+        }
+
         // POST: /Auth/DeleteUser/5
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,QA Manager")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteUser(string id)
@@ -637,7 +683,7 @@ namespace ContentManagementSystem.Controllers
         }
 
         // GET: /Auth/Roles
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,QA Manager")]
         [HttpGet]
         public async Task<IActionResult> Roles()
         {
@@ -668,6 +714,69 @@ namespace ContentManagementSystem.Controllers
             }
 
             return View(roleViewModels);
+        }
+
+        // GET: /Auth/TestSmtp
+        [HttpGet]
+        [AllowAnonymous]
+        public async Task<IActionResult> TestSmtp(string? toEmail)
+        {
+            var targetEmail = toEmail ?? "danh49003@gmail.com";
+            var sb = new StringBuilder();
+            sb.AppendLine("=== CHẨN ĐOÁN KẾT NỐI BREVO SMTP ===");
+            sb.AppendLine($"Thời gian: {DateTime.Now:dd/MM/yyyy HH:mm:ss}");
+            sb.AppendLine($"Server: {_emailSettings.SmtpServer}:{_emailSettings.SmtpPort}");
+            sb.AppendLine($"Sender Email: {_emailSettings.SenderEmail}");
+            sb.AppendLine($"Configured Username: {_emailSettings.Username}");
+            sb.AppendLine($"Password length: {_emailSettings.Password?.Length ?? 0}");
+            sb.AppendLine();
+
+            string[] testUsers = new[] { _emailSettings.Username, _emailSettings.SenderEmail };
+            foreach (var testUser in testUsers.Distinct())
+            {
+                sb.AppendLine($"--- THỬ ĐĂNG NHẬP VỚI USERNAME: '{testUser}' ---");
+                using var client = new MailKit.Net.Smtp.SmtpClient();
+                client.Timeout = 10000;
+                client.ServerCertificateValidationCallback = (s, c, h, e) => true;
+
+                try
+                {
+                    sb.AppendLine($"1. Kết nối tới {_emailSettings.SmtpServer}:{_emailSettings.SmtpPort} (StartTls)...");
+                    await client.ConnectAsync(_emailSettings.SmtpServer, _emailSettings.SmtpPort, MailKit.Security.SecureSocketOptions.StartTls);
+                    sb.AppendLine($"   -> Kết nối thành công! Các cơ chế Auth hỗ trợ: {string.Join(", ", client.AuthenticationMechanisms)}");
+
+                    sb.AppendLine($"2. Đang xác thực với user '{testUser}'...");
+                    await client.AuthenticateAsync(testUser, _emailSettings.Password);
+                    sb.AppendLine($"   -> XÁC THỰC THÀNH CÔNG RỰC RỠ VỚI USER '{testUser}'! 🎉");
+
+                    sb.AppendLine($"3. Gửi email thử nghiệm từ {_emailSettings.SenderEmail} tới {targetEmail}...");
+                    var msg = new MimeKit.MimeMessage();
+                    msg.From.Add(new MimeKit.MailboxAddress(_emailSettings.SenderName, _emailSettings.SenderEmail));
+                    msg.To.Add(new MimeKit.MailboxAddress("User Test", targetEmail));
+                    msg.Subject = $"Thử nghiệm Brevo SMTP thành công [{DateTime.Now:HH:mm:ss}]";
+                    msg.Body = new MimeKit.TextPart("html")
+                    {
+                        Text = $"<h3>Xin chào!</h3><p>Email này được gửi thành công từ Brevo SMTP với Username: <b>{testUser}</b></p>"
+                    };
+
+                    await client.SendAsync(msg);
+                    sb.AppendLine($"   -> GỬI THƯ THÀNH CÔNG 100% TỚI {targetEmail}! 🚀");
+                    await client.DisconnectAsync(true);
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    sb.AppendLine($"   -> ❌ THẤT BẠI: [{ex.GetType().Name}] {ex.Message}");
+                    if (ex.InnerException != null)
+                    {
+                        sb.AppendLine($"      Chi tiết: {ex.InnerException.Message}");
+                    }
+                    try { await client.DisconnectAsync(true); } catch { }
+                }
+                sb.AppendLine();
+            }
+
+            return Content(sb.ToString(), "text/plain; charset=utf-8");
         }
     }
 }
