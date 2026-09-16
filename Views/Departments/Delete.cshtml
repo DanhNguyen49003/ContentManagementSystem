@@ -1,0 +1,45 @@
+@model ContentManagementSystem.ApplicationCore.DTOs.DepartmentDto
+
+@{
+    ViewData["Title"] = "Xác nhận xóa Phòng ban";
+    Layout = "_Layout";
+}
+
+<div class="max-w-xl mx-auto space-y-6">
+    <div class="bg-white rounded-2xl shadow-sm border border-rose-100 p-6 sm:p-8 space-y-6">
+        <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </div>
+
+        <div>
+            <h2 class="text-xl font-bold text-gray-800">Bạn có chắc chắn muốn xóa phòng ban này không?</h2>
+            <p class="text-sm text-gray-500 mt-1">Hành động này sẽ xóa phòng ban khỏi danh sách phân quyền duyệt bài.</p>
+        </div>
+
+        <div class="p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-2 text-sm">
+            <div class="flex justify-between">
+                <span class="text-gray-500">Tên phòng ban:</span>
+                <span class="font-bold text-gray-800">@Model.Name</span>
+            </div>
+            @if (!string.IsNullOrEmpty(Model.Description))
+            {
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Mô tả:</span>
+                    <span class="text-gray-700 text-right max-w-xs">@Model.Description</span>
+                </div>
+            }
+        </div>
+
+        <form asp-action="Delete" method="post" class="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+            <a asp-action="Index" class="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-all">
+                Hủy bỏ
+            </a>
+            <button type="submit" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold shadow-sm transition-all">
+                Xác nhận xóa
+            </button>
+        </form>
+    </div>
+</div>
+

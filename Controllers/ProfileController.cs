@@ -20,17 +20,20 @@ namespace ContentManagementSystem.Controllers
         private readonly SignInManager<ContentUser> _signInManager;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly ILogger<ProfileController> _logger;
+        private readonly ContentManagementSystem.Services.ICurrentUserService _currentUserService;
 
         public ProfileController(
             UserManager<ContentUser> userManager,
             SignInManager<ContentUser> signInManager,
             IWebHostEnvironment webHostEnvironment,
-            ILogger<ProfileController> logger)
+            ILogger<ProfileController> logger,
+            ContentManagementSystem.Services.ICurrentUserService currentUserService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _webHostEnvironment = webHostEnvironment;
             _logger = logger;
+            _currentUserService = currentUserService;
         }
 
         // GET: /Profile or /Profile/Index
@@ -136,6 +139,7 @@ namespace ContentManagementSystem.Controllers
             var result = await _userManager.UpdateAsync(user);
             if (result.Succeeded)
             {
+                _currentUserService.ClearCache(user.Id.ToString());
                 await _signInManager.RefreshSignInAsync(user);
                 TempData["SuccessMessage"] = "Cập nhật thông tin hồ sơ và ảnh đại diện thành công!";
                 return RedirectToAction(nameof(Index), new { tab = "info" });

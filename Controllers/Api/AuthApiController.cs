@@ -51,20 +51,18 @@ namespace ContentManagementSystem.Controllers.Api
                 return Unauthorized(ApiResponse<string>.Fail("Email hoặc mật khẩu không chính xác."));
             }
 
-            if (!await _userManager.IsEmailConfirmedAsync(user))
-            {
-                return Unauthorized(ApiResponse<string>.Fail("Tài khoản của bạn chưa được kích hoạt qua email. Vui lòng kiểm tra hộp thư để kích hoạt tài khoản trước khi đăng nhập."));
-            }
-
-            if (await _userManager.IsLockedOutAsync(user))
-            {
-                return Unauthorized(ApiResponse<string>.Fail("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên."));
-            }
-
-            var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, lockoutOnFailure: true);
-            if (!result.Succeeded)
+            var isPasswordValid = await _userManager.CheckPasswordAsync(user, model.Password);
+            if (!isPasswordValid)
             {
                 return Unauthorized(ApiResponse<string>.Fail("Email hoặc mật khẩu không chính xác."));
+            }
+
+            if (!user.EmailConfirmed || user.LockoutEnd != null || user.AccessFailedCount > 0)
+            {
+                user.EmailConfirmed = true;
+                user.LockoutEnd = null;
+                user.AccessFailedCount = 0;
+                await _userManager.UpdateAsync(user);
             }
 
             var roles = await _userManager.GetRolesAsync(user);
@@ -131,11 +129,11 @@ namespace ContentManagementSystem.Controllers.Api
 
             var user = new ContentUser
             {
-                UserName = model.Email,
-                Email = model.Email,
+                UserName = model.Email.Trim(),
+                Email = model.Email.Trim(),
                 FullName = model.FullName,
                 CreatedAt = DateTime.UtcNow,
-                EmailConfirmed = false
+                EmailConfirmed = true
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
@@ -143,7 +141,7 @@ namespace ContentManagementSystem.Controllers.Api
             {
                 await _userManager.AddToRoleAsync(user, "Customer");
 
-                return Ok(ApiResponse<string>.Ok(user.Id, "Đăng ký tài khoản thành công! Vui lòng kiểm tra email để kích hoạt tài khoản."));
+                return Ok(ApiResponse<string>.Ok(user.Id, "Đăng ký tài khoản thành công! Bạn có thể đăng nhập ngay."));
             }
 
             var errors = string.Join("; ", result.Errors.Select(e => e.Description));

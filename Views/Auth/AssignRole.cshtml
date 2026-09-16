@@ -71,6 +71,27 @@
                 <span asp-validation-for="SelectedRole" class="text-xs text-rose-500 mt-1 block"></span>
             </div>
 
+            <!-- Chọn phòng ban phụ trách -->
+            <div class="p-4 rounded-xl bg-purple-50/50 border border-purple-100 space-y-2">
+                <label asp-for="SelectedDepartmentId" class="block text-xs font-bold text-purple-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>🏢</span> Phân bổ Phòng ban / Khoa phụ trách
+                </label>
+                <p class="text-xs text-gray-500 leading-relaxed">
+                    Đặc biệt quan trọng đối với <strong>QA Coordinator</strong>: Chỉ có thể duyệt các bài viết thuộc đúng phòng ban được phân bổ tại đây.
+                </p>
+                <select asp-for="SelectedDepartmentId" class="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-purple-600 focus:border-transparent transition-all">
+                    <option value="">-- Chưa gán phòng ban (Chung) --</option>
+                    @if (Model.AvailableDepartments != null)
+                    {
+                        @foreach (var dept in Model.AvailableDepartments)
+                        {
+                            <option value="@dept.Id">@dept.Name</option>
+                        }
+                    }
+                </select>
+                <span asp-validation-for="SelectedDepartmentId" class="text-xs text-rose-500 mt-1 block"></span>
+            </div>
+
             <div class="pt-4 border-t border-gray-100 flex items-center justify-between">
                 <a asp-controller="Auth" asp-action="Users" class="text-xs font-semibold text-gray-500 hover:text-gray-800 transition-colors">
                     &larr; Quay lại danh sách Người dùng

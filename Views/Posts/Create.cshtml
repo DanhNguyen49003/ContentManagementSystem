@@ -45,8 +45,8 @@
                     <span asp-validation-for="Slug" class="text-xs text-rose-500 mt-1 block"></span>
                 </div>
 
-                <!-- Category & Author -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Category, Department & Author -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                         <label asp-for="CategoryId" class="block text-sm font-semibold text-gray-700 mb-1">Chuyên mục <span class="text-rose-500">*</span></label>
                         <select asp-for="CategoryId" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white" asp-items="ViewBag.CategoryId" required>
@@ -56,12 +56,68 @@
                     </div>
 
                     <div>
+                        <label asp-for="DepartmentId" class="block text-sm font-semibold text-gray-700 mb-1">Phòng ban phụ trách</label>
+                        <select asp-for="DepartmentId" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white" asp-items="ViewBag.DepartmentId">
+                            <option value="">-- Chọn phòng ban --</option>
+                        </select>
+                        <span asp-validation-for="DepartmentId" class="text-xs text-rose-500 mt-1 block"></span>
+                    </div>
+
+                    <div>
                         <label asp-for="AuthorId" class="block text-sm font-semibold text-gray-700 mb-1">Tác giả <span class="text-rose-500">*</span></label>
                         <select asp-for="AuthorId" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white" asp-items="ViewBag.AuthorId" required>
                             <option value="">-- Chọn tác giả --</option>
                         </select>
                         <span asp-validation-for="AuthorId" class="text-xs text-rose-500 mt-1 block"></span>
                     </div>
+                </div>
+
+                <!-- Tags Selection (Gắn thẻ bài viết) -->
+                <div class="p-4 sm:p-5 rounded-2xl bg-gray-50/80 border border-gray-100 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-800 flex items-center gap-1.5">
+                                <span class="text-blue-600">🏷️</span> Gắn thẻ bài viết (Tags)
+                            </label>
+                            <p class="text-xs text-gray-400 mt-0.5">Bấm chọn các thẻ tag có sẵn hoặc gõ thêm tag mới để độc giả dễ tìm kiếm bài viết.</p>
+                        </div>
+                        <span id="selectedTagsCount" class="text-xs font-semibold px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-100">
+                            0 tag đã chọn
+                        </span>
+                    </div>
+
+                    <!-- Available Tags Chips -->
+                    @if (ViewBag.AvailableTags is List<ContentManagementSystem.ApplicationCore.DTOs.TagDto> availableTags && availableTags.Any())
+                    {
+                        <div class="flex flex-wrap gap-2 pt-1" id="tagsContainer">
+                            @foreach (var tag in availableTags)
+                            {
+                                var isSelected = Model?.SelectedTagIds != null && Model.SelectedTagIds.Contains(tag.Id);
+                                <label class="tag-chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer select-none transition-all @(isSelected ? "bg-blue-600 text-white shadow-sm ring-2 ring-blue-400/40" : "bg-white text-gray-700 border border-gray-200 hover:border-blue-300 hover:bg-blue-50/50")">
+                                    <input type="checkbox" name="SelectedTagIds" value="@tag.Id" class="hidden tag-checkbox" @(isSelected ? "checked" : "") onchange="updateTagChipState(this)" />
+                                    <span class="opacity-60">#</span>
+                                    <span>@tag.Name</span>
+                                    <span class="tag-check @(isSelected ? "inline" : "hidden") text-[10px] font-bold">✓</span>
+                                </label>
+                            }
+                        </div>
+                    }
+
+                    <!-- Quick Add Custom Tag Input -->
+                    <div class="pt-2 flex items-center gap-2">
+                        <div class="relative flex-1">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 text-xs font-bold">#</span>
+                            <input type="text" id="newTagInput" placeholder="Gõ thêm tag mới (ví dụ: AI, Python, Hướng dẫn...) và bấm Thêm tag" class="w-full pl-7 pr-4 py-2 bg-white rounded-xl border border-gray-200 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-gray-400" onkeydown="handleTagKeydown(event)" />
+                        </div>
+                        <button type="button" onclick="addCustomTag()" class="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 active:scale-95 shadow-xs whitespace-nowrap">
+                            + Thêm tag
+                        </button>
+                    </div>
+
+                    <!-- Hidden input to store custom tags comma-separated -->
+                    <input type="hidden" asp-for="CustomTags" id="customTagsInput" />
+                    <!-- Dynamic container for newly added custom tag chips -->
+                    <div id="customTagsList" class="flex flex-wrap gap-2 empty:hidden pt-1"></div>
                 </div>
 
                 <!-- Summary -->
@@ -101,5 +157,114 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        // Tag Selection logic
+        function updateTagChipState(checkbox) {
+            const label = checkbox.closest('label');
+            const checkIcon = label.querySelector('.tag-check');
+            if (checkbox.checked) {
+                label.classList.remove('bg-white', 'text-gray-700', 'border', 'border-gray-200', 'hover:border-blue-300', 'hover:bg-blue-50/50');
+                label.classList.add('bg-blue-600', 'text-white', 'shadow-sm', 'ring-2', 'ring-blue-400/40');
+                if (checkIcon) checkIcon.classList.remove('hidden');
+            } else {
+                label.classList.remove('bg-blue-600', 'text-white', 'shadow-sm', 'ring-2', 'ring-blue-400/40');
+                label.classList.add('bg-white', 'text-gray-700', 'border', 'border-gray-200', 'hover:border-blue-300', 'hover:bg-blue-50/50');
+                if (checkIcon) checkIcon.classList.add('hidden');
+            }
+            updateSelectedCount();
+        }
+
+        let customTagSet = new Set();
+        function addCustomTag() {
+            const input = document.getElementById('newTagInput');
+            const val = input?.value.trim().replace(/^#/, '');
+            if (!val) return;
+
+            if (customTagSet.has(val.toLowerCase())) {
+                input.value = '';
+                return;
+            }
+
+            customTagSet.add(val);
+            syncCustomTagsInput();
+
+            const container = document.getElementById('customTagsList');
+            if (container) {
+                const chip = document.createElement('span');
+                chip.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-600 text-white shadow-sm ring-2 ring-blue-400/40';
+                chip.innerHTML = `<span>#${escapeHtml(val)}</span><button type="button" onclick="removeCustomTag('${escapeHtml(val)}', this)" class="hover:text-rose-200 ml-0.5 text-xs font-bold cursor-pointer">×</button>`;
+                container.appendChild(chip);
+            }
+
+            input.value = '';
+            updateSelectedCount();
+        }
+
+        function removeCustomTag(val, btn) {
+            customTagSet.delete(val);
+            btn.closest('span')?.remove();
+            syncCustomTagsInput();
+            updateSelectedCount();
+        }
+
+        function syncCustomTagsInput() {
+            const hidden = document.getElementById('customTagsInput');
+            if (hidden) hidden.value = Array.from(customTagSet).join(',');
+        }
+
+        function handleTagKeydown(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addCustomTag();
+            }
+        }
+
+        function updateSelectedCount() {
+            const checkedCount = document.querySelectorAll('.tag-checkbox:checked').length;
+            const total = checkedCount + customTagSet.size;
+            const badge = document.getElementById('selectedTagsCount');
+            if (badge) badge.innerText = total + ' tag đã chọn';
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // Slug Auto-generation
+        document.getElementById('btnGenerateSlug')?.addEventListener('click', function () {
+            const title = document.getElementById('Title')?.value || '';
+            const slug = toSlug(title);
+            const slugInput = document.getElementById('Slug');
+            if (slugInput) slugInput.value = slug;
+        });
+
+        document.getElementById('Title')?.addEventListener('input', function () {
+            const slugInput = document.getElementById('Slug');
+            if (slugInput && !slugInput.dataset.manual) {
+                slugInput.value = toSlug(this.value);
+            }
+        });
+
+        document.getElementById('Slug')?.addEventListener('input', function () {
+            this.dataset.manual = 'true';
+        });
+
+        function toSlug(str) {
+            str = str.toLowerCase();
+            str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, 'a');
+            str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, 'e');
+            str = str.replace(/ì|í|ị|ỉ|ĩ/g, 'i');
+            str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, 'o');
+            str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, 'u');
+            str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, 'y');
+            str = str.replace(/đ/g, 'd');
+            str = str.replace(/[^a-z0-9 -]/g, '');
+            str = str.replace(/\s+/g, '-');
+            str = str.replace(/-+/g, '-');
+            return str.trim();
+        }
+
+        document.addEventListener('DOMContentLoaded', updateSelectedCount);
+    </script>
 }
 

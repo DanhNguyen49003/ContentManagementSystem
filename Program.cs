@@ -17,6 +17,12 @@ var builder = WebApplication.CreateBuilder(args);
 // ===== 1. Controller & Razor Views =====
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
+builder.Services.AddMemoryCache();
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+});
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
 // ===== 2. Email Sender Configuration =====
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
@@ -41,6 +47,7 @@ builder.Services.AddHttpClient<ContentManagementSystem.Services.ApiClients.IApiC
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<IBannerService, BannerService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 builder.Services.AddScoped<ICommentService, CommentService>();
 builder.Services.AddScoped<IContactMessageService, ContactMessageService>();
 builder.Services.AddScoped<IEventService, EventService>();
@@ -68,14 +75,27 @@ builder.Services.AddDbContext<ContentManageIdentityDbContext>(options =>
 builder.Services.AddIdentity<ContentUser, ContentRole>(options =>
 {
     options.SignIn.RequireConfirmedAccount = false;
+    options.SignIn.RequireConfirmedEmail = false;
+    options.SignIn.RequireConfirmedPhoneNumber = false;
     options.Password.RequireDigit = false;
+    options.Password.RequireLowercase = false;
     options.Password.RequireNonAlphanumeric = false;
     options.Password.RequireUppercase = false;
     options.Password.RequiredLength = 6;
+    options.Password.RequiredUniqueChars = 0;
+    options.Lockout.AllowedForNewUsers = false;
 })
 .AddEntityFrameworkStores<ContentManageIdentityDbContext>()
 .AddDefaultTokenProviders()
 .AddDefaultUI();
+
+builder.Services.Configure<IdentityOptions>(options =>
+{
+    options.SignIn.RequireConfirmedAccount = false;
+    options.SignIn.RequireConfirmedEmail = false;
+    options.SignIn.RequireConfirmedPhoneNumber = false;
+    options.Lockout.AllowedForNewUsers = false;
+});
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -178,7 +198,15 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
-app.UseStaticFiles();
+
+app.UseResponseCompression();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        ctx.Context.Response.Headers["Cache-Control"] = "public,max-age=604800";
+    }
+});
 
 // Swagger Documentation UI
 app.UseSwagger();

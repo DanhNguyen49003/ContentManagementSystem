@@ -128,6 +128,8 @@ namespace ContentManagementSystem.ViewModels.Auth
         public bool IsLockedOut => LockoutEnd.HasValue && LockoutEnd.Value > DateTimeOffset.UtcNow;
         public DateTime CreatedAt { get; set; }
         public bool EmailConfirmed { get; set; }
+        public Guid? DepartmentId { get; set; }
+        public string? DepartmentName { get; set; }
     }
 
     public class AssignRoleViewModel
@@ -143,6 +145,10 @@ namespace ContentManagementSystem.ViewModels.Auth
         public string SelectedRole { get; set; } = string.Empty;
 
         public List<string> AvailableRoles { get; set; } = new List<string>();
+
+        [Display(Name = "Phòng ban phụ trách")]
+        public Guid? SelectedDepartmentId { get; set; }
+        public List<ContentManagementSystem.ApplicationCore.DTOs.DepartmentDto> AvailableDepartments { get; set; } = new();
     }
 
     public class RoleManagementViewModel

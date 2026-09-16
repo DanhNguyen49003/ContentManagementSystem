@@ -1,44 +1,280 @@
-@using Microsoft.AspNetCore.Identity
-@using ContentManagementSystem.ApplicationCore.Entities.Identity
-@inject UserManager<ContentUser> UserManager
-@inject SignInManager<ContentUser> SignInManager
+@model ContentManagementSystem.ViewModels.DashboardViewModel
+@using ContentManagementSystem.Services
+@inject ICurrentUserService CurrentUserService
 
 @{
     ViewData["Title"] = "Bảng điều khiển";
     Layout = "_Layout";
 
-    ContentUser? currentUser = null;
-    string displayName = User.Identity?.Name ?? "Bạn";
-    string userAvatar = "";
-    bool isAdmin = false;
-    bool isQAManager = false;
-    bool isQACoordinator = false;
+    var currentUser = await CurrentUserService.GetCurrentUserAsync();
+    string displayName = currentUser.DisplayName;
+    string userAvatar = currentUser.GetAvatarOrDefault();
+    bool isAdmin = currentUser.IsAdmin;
+    bool isQAManager = currentUser.IsQAManager;
+    bool isQACoordinator = currentUser.IsQACoordinator;
+    bool isCustomer = currentUser.IsCustomer || (!isAdmin && !isQAManager && !isQACoordinator);
+    string roleName = currentUser.RoleName;
 
-    if (SignInManager.IsSignedIn(User))
-    {
-        currentUser = await UserManager.GetUserAsync(User);
-        if (currentUser != null)
-        {
-            displayName = !string.IsNullOrWhiteSpace(currentUser.FullName) 
-                ? currentUser.FullName 
-                : (!string.IsNullOrWhiteSpace(currentUser.UserName) ? currentUser.UserName : (currentUser.Email ?? "Bạn"));
-            userAvatar = currentUser.Avatar ?? "";
-
-            var userRoles = await UserManager.GetRolesAsync(currentUser);
-            isAdmin = userRoles.Contains("Admin", StringComparer.OrdinalIgnoreCase) || currentUser.Email?.Equals("admin@cms.com", StringComparison.OrdinalIgnoreCase) == true;
-            isQAManager = userRoles.Contains("QA Manager", StringComparer.OrdinalIgnoreCase);
-            isQACoordinator = userRoles.Contains("QA Coordinator", StringComparer.OrdinalIgnoreCase);
-        }
-    }
-
-    if (string.IsNullOrEmpty(userAvatar))
-    {
-        userAvatar = $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(displayName)}&background=ffffff&color=2563eb&bold=true";
-    }
+    int totalPosts = Model.TotalPosts;
+    int publishedPosts = Model.PublishedPosts;
+    int draftPosts = Model.DraftPosts;
+    int approvalRate = totalPosts > 0 ? (int)Math.Round((double)publishedPosts / totalPosts * 100) : 0;
 }
 
-<div class="space-y-6">
-    <!-- Welcome banner -->
+<div class="space-y-8 pb-10">
+
+@if (isCustomer)
+{
+    <!-- ============================================================== -->
+    <!-- GIAO DIỆN DÀNH CHO CUSTOMER (BẠN ĐỌC / ĐỘC GIẢ / KHÁCH HÀNG)   -->
+    <!-- ============================================================== -->
+
+    <!-- Reader Hero Banner -->
+    <div class="relative overflow-hidden bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 rounded-3xl p-6 sm:p-8 text-white shadow-xl">
+        <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+        <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div class="flex items-center gap-4">
+                <a asp-controller="Profile" asp-action="Index" class="relative group flex-shrink-0" title="Chỉnh sửa hồ sơ cá nhân">
+                    <img src="@userAvatar" alt="@displayName" class="w-16 h-16 rounded-2xl object-cover ring-4 ring-white/30 shadow-lg bg-white group-hover:scale-105 transition-transform" onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name=@(Uri.EscapeDataString(displayName))&background=ffffff&color=2563eb&bold=true';" />
+                    <span class="absolute -bottom-1 -right-1 bg-emerald-500 border-2 border-white w-4 h-4 rounded-full" title="Online"></span>
+                </a>
+                <div>
+                    <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/20 text-blue-100 text-xs font-semibold mb-1 backdrop-blur-sm">
+                        <span>📖 Bạn đọc & Độc giả</span>
+                    </div>
+                    <h2 class="text-2xl sm:text-3xl font-black tracking-tight">
+                        Xin chào, @displayName! 👋
+                    </h2>
+                    <p class="text-blue-100 text-xs sm:text-sm mt-1 max-w-xl leading-relaxed">
+                        Chào mừng bạn đến với cổng thông tin CMS Portal. Khám phá các bài viết hữu ích, tin tức mới và tham gia tương tác cùng cộng đồng.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Quick Action Buttons -->
+            <div class="flex items-center gap-3 flex-wrap">
+                <a asp-controller="Posts" asp-action="Index" class="inline-flex items-center gap-2 bg-white text-blue-700 font-bold px-4 py-2.5 rounded-xl text-xs sm:text-sm shadow-md hover:bg-blue-50 transition-all active:scale-95">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+                    Khám phá bài viết
+                </a>
+                <a asp-controller="Profile" asp-action="Index" class="inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white font-semibold px-4 py-2.5 rounded-xl text-xs sm:text-sm transition-all border border-white/25 active:scale-95 backdrop-blur-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                    Hồ sơ cá nhân
+                </a>
+            </div>
+        </div>
+
+        <!-- Quick Search Bar inside Banner -->
+        <div class="relative z-10 mt-6 pt-5 border-t border-white/20">
+            <form method="get" asp-controller="Posts" asp-action="Index" class="flex items-center max-w-2xl bg-white/15 backdrop-blur-md rounded-2xl p-1.5 border border-white/25 shadow-inner">
+                <svg class="w-5 h-5 text-blue-200 ml-3 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input type="text" name="search" placeholder="Tìm kiếm bài viết, tác giả, chủ đề bạn quan tâm..." class="w-full bg-transparent text-white placeholder-blue-200 text-xs sm:text-sm px-2 py-1.5 outline-none font-medium" />
+                <button type="submit" class="bg-white text-blue-700 hover:bg-blue-50 font-bold px-4 py-2 rounded-xl text-xs shadow transition-all flex-shrink-0">
+                    Tìm kiếm
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 4 Reader Stat Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <a asp-controller="Posts" asp-action="Index" class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all group">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Tin tức & Bài viết</span>
+                <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+                </div>
+            </div>
+            <div class="mt-3">
+                <h3 class="text-3xl font-black text-gray-800 tracking-tight">@Model.PublishedPosts</h3>
+                <p class="text-xs text-blue-600 font-semibold mt-1 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                    Đọc ngay các bài mới &rarr;
+                </p>
+            </div>
+        </a>
+
+        <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Chủ đề khám phá</span>
+                <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                </div>
+            </div>
+            <div class="mt-3">
+                <h3 class="text-3xl font-black text-gray-800 tracking-tight">@Model.TotalCategories</h3>
+                <p class="text-xs text-indigo-600 font-semibold mt-1">Đa dạng lĩnh vực kiến thức</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Thảo luận cộng đồng</span>
+                <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                </div>
+            </div>
+            <div class="mt-3">
+                <h3 class="text-3xl font-black text-gray-800 tracking-tight">@Model.TotalComments</h3>
+                <p class="text-xs text-amber-600 font-semibold mt-1">Bình luận & phản hồi hữu ích</p>
+            </div>
+        </div>
+
+        <a asp-controller="ContactMessages" asp-action="Create" class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all group">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Góp ý & Hỗ trợ</span>
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                </div>
+            </div>
+            <div class="mt-3">
+                <h3 class="text-2xl font-black text-gray-800 tracking-tight">Gửi góp ý</h3>
+                <p class="text-xs text-emerald-600 font-semibold mt-1.5 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                    Gửi thư tới Ban biên tập &rarr;
+                </p>
+            </div>
+        </a>
+    </div>
+
+    <!-- Section: Bài viết Mới nhất & Nổi bật (Featured & Recent Posts) -->
+    <div class="space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-xl font-black text-gray-900 flex items-center gap-2 tracking-tight">
+                    <span class="w-3 h-3 rounded-full bg-blue-600"></span>
+                    Bài viết Mới nhất & Nổi bật
+                </h3>
+                <p class="text-xs text-gray-500 mt-0.5">Những bài viết chọn lọc mới được xuất bản dành cho bạn</p>
+            </div>
+            <a asp-controller="Posts" asp-action="Index" class="text-xs sm:text-sm font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1">
+                Xem tất cả (@Model.PublishedPosts bài) &rarr;
+            </a>
+        </div>
+
+        @if (Model.RecentPosts != null && Model.RecentPosts.Any())
+        {
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                @foreach (var post in Model.RecentPosts)
+                {
+                    <article class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all flex flex-col justify-between overflow-hidden group">
+                        <!-- Card Header / Gradient placeholder banner -->
+                        <div class="h-36 bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 p-4 flex flex-col justify-between relative overflow-hidden">
+                            <div class="flex items-center justify-between relative z-10">
+                                <span class="px-2.5 py-1 bg-white/20 backdrop-blur-md text-white text-[11px] font-bold rounded-lg border border-white/20">
+                                    @post.CategoryName
+                                </span>
+                                <span class="text-white/80 text-[11px] font-medium">
+                                    @post.CreatedAt.ToString("dd/MM/yyyy")
+                                </span>
+                            </div>
+                            <div class="relative z-10 flex items-center gap-2 text-white/90 text-xs font-semibold">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                <span>@post.AuthorName</span>
+                            </div>
+                        </div>
+
+                        <!-- Card Body -->
+                        <div class="p-5 flex-1 flex flex-col justify-between">
+                            <div>
+                                <h4 class="font-bold text-gray-900 text-base group-hover:text-blue-600 transition-colors line-clamp-2 leading-snug">
+                                    <a asp-controller="Posts" asp-action="Details" asp-route-id="@post.Id">
+                                        @post.Title
+                                    </a>
+                                </h4>
+                                <p class="text-xs text-gray-500 mt-2 line-clamp-2 leading-relaxed">
+                                    @post.Summary
+                                </p>
+                            </div>
+
+                            <!-- Card Footer -->
+                            <div class="mt-5 pt-3.5 border-t border-gray-100 flex items-center justify-between">
+                                <span class="inline-flex items-center gap-1.5 text-xs text-gray-500 font-medium">
+                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                                    @post.CommentCount bình luận
+                                </span>
+                                <a asp-controller="Posts" asp-action="Details" asp-route-id="@post.Id" class="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 group-hover:translate-x-0.5 transition-all">
+                                    Đọc bài &rarr;
+                                </a>
+                            </div>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="bg-white rounded-2xl p-8 border border-gray-100 text-center">
+                <p class="text-gray-500 text-sm">Chưa có bài viết nào được xuất bản.</p>
+            </div>
+        }
+    </div>
+
+    <!-- Section: Chủ đề & Biểu đồ Khám phá dành cho Bạn đọc -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Chart 1: Chủ đề Độc giả Quan tâm (1 cột) -->
+        <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col justify-between">
+            <div>
+                <h3 class="font-bold text-gray-900 text-base flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 bg-indigo-600 rounded-full"></span>
+                    Chủ đề Quan tâm Hàng đầu
+                </h3>
+                <p class="text-xs text-gray-400 mt-0.5">Tỷ lệ các chuyên mục bài viết phong phú bạn có thể khám phá</p>
+            </div>
+            <div class="relative h-60 my-4 flex items-center justify-center">
+                <canvas id="customerCategoryChart"></canvas>
+            </div>
+            <div class="pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+                <span>Tổng cộng: <strong class="text-gray-800">@Model.TotalCategories</strong> chuyên mục</span>
+                <a asp-controller="Posts" asp-action="Index" class="text-blue-600 font-semibold hover:underline">Xem tất cả &rarr;</a>
+            </div>
+        </div>
+
+        <!-- Chart 2: Xu hướng Tin tức & Thảo luận Cộng đồng (2 cột) -->
+        <div class="lg:col-span-2 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-1">
+                    <h3 class="font-bold text-gray-900 text-base flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 bg-blue-600 rounded-full"></span>
+                        Xu hướng Tin tức & Thảo luận Cộng đồng
+                    </h3>
+                    <span class="text-[11px] font-bold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
+                        Cập nhật liên tục
+                    </span>
+                </div>
+                <p class="text-xs text-gray-400">Số lượng bài viết mới và các lượt phản hồi sôi nổi qua từng tháng</p>
+            </div>
+            <div class="relative h-64 my-3">
+                <canvas id="customerTrendChart"></canvas>
+            </div>
+            <div class="pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+                <span>Dữ liệu thống kê 6 tháng gần nhất</span>
+                <span class="text-emerald-600 font-semibold">Cộng đồng hoạt động tích cực</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback banner for Readers -->
+    <div class="bg-gradient-to-r from-slate-900 to-indigo-950 rounded-2xl p-6 text-white shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-3.5">
+            <div class="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-amber-400 flex-shrink-0 text-2xl">
+                ✉️
+            </div>
+            <div>
+                <h4 class="font-bold text-white text-base">Bạn có ý kiến đóng góp hoặc cần hỗ trợ?</h4>
+                <p class="text-xs text-slate-300 mt-0.5">Ban biên tập luôn lắng nghe mọi phản hồi để nâng cao chất lượng nội dung.</p>
+            </div>
+        </div>
+        <a asp-controller="ContactMessages" asp-action="Create" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs sm:text-sm shadow transition-all whitespace-nowrap active:scale-95">
+            Gửi phản hồi ngay &rarr;
+        </a>
+    </div>
+}
+else
+{
+    <!-- ============================================================== -->
+    <!-- GIAO DIỆN DÀNH CHO ADMIN / QA MANAGER / QA COORDINATOR         -->
+    <!-- ============================================================== -->
+
+    <!-- Admin Welcome Banner -->
     <div class="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 rounded-2xl p-6 text-white shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
         <div class="flex items-center gap-4">
             <a asp-controller="Profile" asp-action="Index" title="Chỉnh sửa ảnh đại diện và hồ sơ" class="relative group flex-shrink-0">
@@ -46,95 +282,222 @@
                 <span class="absolute -bottom-1 -right-1 bg-emerald-500 border-2 border-white w-4 h-4 rounded-full" title="Online"></span>
             </a>
             <div>
+                <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 text-blue-100 text-xs font-semibold mb-1">
+                    <span>👑 Vai trò: @roleName</span>
+                </div>
                 <h2 class="text-2xl font-bold flex items-center gap-2">
                     Xin chào, @displayName! 👋
                 </h2>
-                <p class="text-blue-100 text-sm mt-1">Chào mừng quay trở lại hệ thống quản trị nội dung CMS. Hôm nay bạn muốn làm gì?</p>
+                <p class="text-blue-100 text-sm mt-0.5">Bảng điều khiển quản trị hệ thống CMS Portal. Hôm nay bạn muốn xử lý tác vụ gì?</p>
             </div>
         </div>
         <div class="flex items-center gap-3 flex-wrap">
-            <a asp-controller="Posts" asp-action="Create" class="inline-flex items-center gap-2 bg-white text-blue-700 font-semibold px-4 py-2.5 rounded-xl text-sm shadow hover:bg-blue-50 transition-all">
+            <a asp-controller="Posts" asp-action="Create" class="inline-flex items-center gap-2 bg-white text-blue-700 font-semibold px-4 py-2.5 rounded-xl text-sm shadow hover:bg-blue-50 transition-all active:scale-95">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 Viết bài mới
             </a>
-            @if (isAdmin || isQAManager || isQACoordinator)
-            {
-                <a asp-controller="Categories" asp-action="Create" class="inline-flex items-center gap-2 bg-blue-500 bg-opacity-30 hover:bg-opacity-40 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-all border border-blue-400 border-opacity-30">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-                    Thêm danh mục
-                </a>
-            }
+            <a asp-controller="Categories" asp-action="Create" class="inline-flex items-center gap-2 bg-blue-500 bg-opacity-30 hover:bg-opacity-40 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-all border border-blue-400 border-opacity-30 active:scale-95">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                Thêm danh mục
+            </a>
         </div>
     </div>
 
-    <!-- Quick Stats Grid -->
+    <!-- Admin Quick Stats Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <!-- Card 1: Posts -->
-        <a asp-controller="Posts" asp-action="Index" class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow group">
+        <a asp-controller="Posts" asp-action="Index" class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all group">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Bài viết</span>
-                <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Bài viết</span>
+                <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 </div>
             </div>
             <div class="mt-3">
-                <h3 class="text-2xl font-bold text-gray-800">Quản lý bài viết</h3>
-                <p class="text-xs text-blue-600 font-medium mt-1 flex items-center gap-1">
-                    Xem danh sách &rarr;
+                <div class="flex items-baseline gap-2">
+                    <h3 class="text-3xl font-black text-gray-800 tracking-tight">@Model.TotalPosts</h3>
+                    <span class="text-xs font-semibold text-emerald-600">(@Model.PublishedPosts xuất bản)</span>
+                </div>
+                <p class="text-xs text-blue-600 font-medium mt-1.5 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                    Quản lý danh sách &rarr;
                 </p>
             </div>
         </a>
 
-        <!-- Card 2: Categories -->
-        <a asp-controller="Categories" asp-action="Index" class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow group">
+        <a asp-controller="Categories" asp-action="Index" class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all group">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Chuyên mục</span>
-                <div class="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Chuyên mục</span>
+                <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
                 </div>
             </div>
             <div class="mt-3">
-                <h3 class="text-2xl font-bold text-gray-800">Danh mục</h3>
-                <p class="text-xs text-indigo-600 font-medium mt-1 flex items-center gap-1">
-                    Phân loại bài viết &rarr;
+                <div class="flex items-baseline gap-2">
+                    <h3 class="text-3xl font-black text-gray-800 tracking-tight">@Model.TotalCategories</h3>
+                    <span class="text-xs font-semibold text-indigo-600">phân loại</span>
+                </div>
+                <p class="text-xs text-indigo-600 font-medium mt-1.5 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                    Xem các chuyên mục &rarr;
                 </p>
             </div>
         </a>
 
-        <!-- Card 3: Comments -->
-        <a asp-controller="Comments" asp-action="Index" class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow group">
+        <a asp-controller="Comments" asp-action="Index" class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md hover:border-amber-200 transition-all group">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Tương tác</span>
-                <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Bình luận</span>
+                <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
                 </div>
             </div>
             <div class="mt-3">
-                <h3 class="text-2xl font-bold text-gray-800">Bình luận</h3>
-                <p class="text-xs text-amber-600 font-medium mt-1 flex items-center gap-1">
-                    Kiểm duyệt phản hồi &rarr;
+                <div class="flex items-baseline gap-2">
+                    <h3 class="text-3xl font-black text-gray-800 tracking-tight">@Model.TotalComments</h3>
+                    <span class="text-xs font-semibold text-amber-600">phản hồi</span>
+                </div>
+                <p class="text-xs text-amber-600 font-medium mt-1.5 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                    Kiểm duyệt bình luận &rarr;
                 </p>
             </div>
         </a>
 
-        <!-- Card 4: Contact Messages -->
-        <a asp-controller="ContactMessages" asp-action="Index" class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow group">
+        <a asp-controller="ContactMessages" asp-action="Index" class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all group">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Liên hệ</span>
-                <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Hộp thư liên hệ</span>
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                 </div>
             </div>
             <div class="mt-3">
-                <h3 class="text-2xl font-bold text-gray-800">Hộp thư</h3>
-                <p class="text-xs text-emerald-600 font-medium mt-1 flex items-center gap-1">
-                    Tin nhắn người dùng &rarr;
+                <div class="flex items-baseline gap-2">
+                    <h3 class="text-3xl font-black text-gray-800 tracking-tight">@Model.TotalContactMessages</h3>
+                    <span class="text-xs font-semibold text-emerald-600">tin nhắn</span>
+                </div>
+                <p class="text-xs text-emerald-600 font-medium mt-1.5 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                    Đọc thư người dùng &rarr;
                 </p>
             </div>
         </a>
     </div>
 
-    <!-- Quick Navigation Sections -->
+    <!-- Admin Charts Section -->
+    <div class="space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+                <h3 class="text-lg font-black text-gray-800 flex items-center gap-2 tracking-tight">
+                    <span class="w-3 h-3 rounded-full bg-blue-600"></span>
+                    <span>Biểu đồ & Thống kê Hoạt động Hệ thống</span>
+                </h3>
+                <p class="text-xs text-gray-400 mt-0.5">
+                    @if (isAdmin)
+                    {
+                        <span>Chế độ <strong class="text-rose-600">Quản trị viên</strong> (Hiển thị 4 biểu đồ: Xu hướng, Chuyên mục, Phân bổ vai trò, Trạng thái bài viết)</span>
+                    }
+                    else
+                    {
+                        <span>Chế độ <strong class="text-amber-600">Kiểm duyệt QA</strong> (Tiến độ xuất bản và chất lượng nội dung)</span>
+                    }
+                </p>
+            </div>
+        </div>
+
+        <!-- Row 1: Xu hướng & Chuyên mục -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Chart 1: Xu hướng Xuất bản & Tương tác 6 tháng (2 cột) -->
+            <div class="lg:col-span-2 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+                    <div>
+                        <h3 class="font-bold text-gray-800 text-base sm:text-lg flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 bg-blue-600 rounded-full"></span>
+                            Xu hướng Xuất bản & Tương tác (6 tháng)
+                        </h3>
+                        <p class="text-xs text-gray-400 mt-0.5">
+                            Số lượng bài viết mới và lượt bình luận qua từng tháng
+                        </p>
+                    </div>
+                    <div class="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-xl text-xs font-semibold self-start sm:self-auto border border-blue-100">
+                        <span class="w-2 h-2 rounded-full bg-blue-600"></span>
+                        Cập nhật thời gian thực
+                    </div>
+                </div>
+                <div class="relative h-72">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 2: Cơ cấu Chuyên mục (1 cột) -->
+            <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="font-bold text-gray-800 text-base sm:text-lg flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 bg-indigo-600 rounded-full"></span>
+                            Cơ cấu Chuyên mục
+                        </h3>
+                    </div>
+                    <p class="text-xs text-gray-400 mb-4">
+                        Tỷ lệ bài viết phân bổ theo từng chuyên mục hàng đầu
+                    </p>
+                </div>
+                <div class="relative h-60 flex items-center justify-center">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+                <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+                    <span>Tổng: <strong class="text-gray-800">@Model.TotalCategories</strong> chuyên mục</span>
+                    <a asp-controller="Categories" asp-action="Index" class="text-blue-600 hover:text-blue-700 font-semibold hover:underline">Xem tất cả &rarr;</a>
+                </div>
+            </div>
+        </div>
+
+        @if (isAdmin)
+        {
+            <!-- Row 2 (Admin): Phân bổ vai trò & Trạng thái bài viết -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Chart 3: Phân bổ Người dùng theo Vai trò -->
+                <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-gray-800 text-base flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 bg-purple-600 rounded-full"></span>
+                                Thành viên theo Vai trò (Phân quyền)
+                            </h3>
+                            <p class="text-xs text-gray-400 mt-0.5">Số lượng tài khoản trong 4 vai trò hệ thống</p>
+                        </div>
+                        <a asp-controller="Auth" asp-action="Users" class="text-xs text-blue-600 hover:underline font-semibold">Quản lý User &rarr;</a>
+                    </div>
+                    <div class="relative h-56">
+                        <canvas id="roleChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 4: Trạng thái Bài viết -->
+                <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col justify-between">
+                    <div class="flex items-center justify-between mb-2">
+                        <div>
+                            <h3 class="font-bold text-gray-800 text-base flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 bg-emerald-600 rounded-full"></span>
+                                Trạng thái Xuất bản Bài viết
+                            </h3>
+                            <p class="text-xs text-gray-400 mt-0.5">Tỷ lệ nội dung công khai trên website vs bản nháp</p>
+                        </div>
+                        <a asp-controller="Posts" asp-action="Index" class="text-xs text-blue-600 hover:underline font-semibold">Bài viết &rarr;</a>
+                    </div>
+                    <div class="relative h-48 flex items-center justify-center">
+                        <canvas id="postStatusChart"></canvas>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 mt-2 pt-3 border-t border-gray-100 text-center">
+                        <div class="bg-emerald-50 rounded-xl p-2 border border-emerald-100">
+                            <span class="text-[11px] text-emerald-700 font-semibold block">Đã xuất bản</span>
+                            <strong class="text-emerald-800 text-lg font-bold">@Model.PublishedPosts</strong>
+                        </div>
+                        <div class="bg-gray-50 rounded-xl p-2 border border-gray-200">
+                            <span class="text-[11px] text-gray-600 font-semibold block">Bản nháp / Ẩn</span>
+                            <strong class="text-gray-800 text-lg font-bold">@Model.DraftPosts</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Admin Hubs (Quản lý Nội dung & Giao diện) -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Content Management Hub -->
         <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
@@ -257,7 +620,6 @@
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <!-- Quản lý Người dùng -->
                 <a asp-controller="Auth" asp-action="Users" class="p-4 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all flex items-center justify-between group">
                     <div class="flex items-center gap-3.5">
                         <div class="w-11 h-11 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
@@ -273,7 +635,6 @@
                     </div>
                 </a>
 
-                <!-- Danh sách Vai trò -->
                 <a asp-controller="Auth" asp-action="Roles" class="p-4 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all flex items-center justify-between group">
                     <div class="flex items-center gap-3.5">
                         <div class="w-11 h-11 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
@@ -291,5 +652,288 @@
             </div>
         </div>
     }
+}
 </div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            @if (isCustomer)
+            {
+                <text>
+                // 1. Customer Category Chart (Doughnut)
+                const ctxCustCat = document.getElementById('customerCategoryChart')?.getContext('2d');
+                if (ctxCustCat) {
+                    new Chart(ctxCustCat, {
+                        type: 'doughnut',
+                        data: {
+                            labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CategoryNames)),
+                            datasets: [{
+                                data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CategoryPostCounts)),
+                                backgroundColor: ['#2563eb', '#6366f1', '#8b5cf6', '#ec4899', '#10b981'],
+                                borderWidth: 3,
+                                borderColor: '#ffffff',
+                                hoverOffset: 8
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: { boxWidth: 10, usePointStyle: true, font: { size: 11, weight: '500' }, padding: 12 }
+                                },
+                                tooltip: { padding: 10, cornerRadius: 8 }
+                            },
+                            cutout: '70%'
+                        }
+                    });
+                }
+
+                // 2. Customer Trend Chart (Line)
+                const ctxCustTrend = document.getElementById('customerTrendChart')?.getContext('2d');
+                if (ctxCustTrend) {
+                    const gradientBlue = ctxCustTrend.createLinearGradient(0, 0, 0, 240);
+                    gradientBlue.addColorStop(0, 'rgba(37, 99, 235, 0.3)');
+                    gradientBlue.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
+
+                    const gradientAmber = ctxCustTrend.createLinearGradient(0, 0, 0, 240);
+                    gradientAmber.addColorStop(0, 'rgba(245, 158, 11, 0.25)');
+                    gradientAmber.addColorStop(1, 'rgba(245, 158, 11, 0.0)');
+
+                    new Chart(ctxCustTrend, {
+                        type: 'line',
+                        data: {
+                            labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Months)),
+                            datasets: [
+                                {
+                                    label: 'Bài viết mới',
+                                    data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MonthlyPostCounts)),
+                                    borderColor: '#2563eb',
+                                    backgroundColor: gradientBlue,
+                                    fill: true,
+                                    tension: 0.4,
+                                    borderWidth: 3,
+                                    pointBackgroundColor: '#2563eb',
+                                    pointBorderColor: '#ffffff',
+                                    pointBorderWidth: 2,
+                                    pointRadius: 5
+                                },
+                                {
+                                    label: 'Thảo luận & Bình luận',
+                                    data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MonthlyCommentCounts)),
+                                    borderColor: '#f59e0b',
+                                    backgroundColor: gradientAmber,
+                                    fill: true,
+                                    tension: 0.4,
+                                    borderWidth: 2.5,
+                                    borderDash: [5, 5],
+                                    pointBackgroundColor: '#f59e0b',
+                                    pointBorderColor: '#ffffff',
+                                    pointBorderWidth: 2,
+                                    pointRadius: 4
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: { intersect: false, mode: 'index' },
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                    labels: { boxWidth: 12, usePointStyle: true, font: { size: 11, weight: '600' } }
+                                },
+                                tooltip: { padding: 10, cornerRadius: 8 }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    suggestedMax: 35,
+                                    grid: { color: '#f1f5f9' },
+                                    ticks: { font: { size: 11 }, stepSize: 5, precision: 0 }
+                                },
+                                x: {
+                                    grid: { display: false },
+                                    ticks: { font: { size: 11, weight: '500' } }
+                                }
+                            }
+                        }
+                    });
+                }
+                </text>
+            }
+            else
+            {
+                <text>
+                // Admin Trend Chart
+                const ctxTrend = document.getElementById('trendChart')?.getContext('2d');
+                if (ctxTrend) {
+                    const gradientBlue = ctxTrend.createLinearGradient(0, 0, 0, 280);
+                    gradientBlue.addColorStop(0, 'rgba(37, 99, 235, 0.35)');
+                    gradientBlue.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
+
+                    const gradientAmber = ctxTrend.createLinearGradient(0, 0, 0, 280);
+                    gradientAmber.addColorStop(0, 'rgba(245, 158, 11, 0.25)');
+                    gradientAmber.addColorStop(1, 'rgba(245, 158, 11, 0.0)');
+
+                    new Chart(ctxTrend, {
+                        type: 'line',
+                        data: {
+                            labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Months)),
+                            datasets: [
+                                {
+                                    label: 'Bài viết xuất bản',
+                                    data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MonthlyPostCounts)),
+                                    borderColor: '#2563eb',
+                                    backgroundColor: gradientBlue,
+                                    fill: true,
+                                    tension: 0.4,
+                                    borderWidth: 3,
+                                    pointBackgroundColor: '#2563eb',
+                                    pointBorderColor: '#ffffff',
+                                    pointBorderWidth: 2,
+                                    pointRadius: 5
+                                },
+                                {
+                                    label: 'Bình luận / Phản hồi',
+                                    data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MonthlyCommentCounts)),
+                                    borderColor: '#f59e0b',
+                                    backgroundColor: gradientAmber,
+                                    fill: true,
+                                    tension: 0.4,
+                                    borderWidth: 2.5,
+                                    borderDash: [5, 5],
+                                    pointBackgroundColor: '#f59e0b',
+                                    pointBorderColor: '#ffffff',
+                                    pointBorderWidth: 2,
+                                    pointRadius: 4
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: { intersect: false, mode: 'index' },
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                    labels: { boxWidth: 12, usePointStyle: true, font: { size: 12, weight: '600' } }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    suggestedMax: 35,
+                                    grid: { color: '#f1f5f9' },
+                                    ticks: { font: { size: 11 }, stepSize: 5, precision: 0 }
+                                },
+                                x: {
+                                    grid: { display: false },
+                                    ticks: { font: { size: 11, weight: '500' } }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                // Admin Category Chart
+                const ctxCat = document.getElementById('categoryChart')?.getContext('2d');
+                if (ctxCat) {
+                    new Chart(ctxCat, {
+                        type: 'doughnut',
+                        data: {
+                            labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CategoryNames)),
+                            datasets: [{
+                                data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CategoryPostCounts)),
+                                backgroundColor: ['#2563eb', '#6366f1', '#8b5cf6', '#ec4899', '#10b981'],
+                                borderWidth: 3,
+                                borderColor: '#ffffff',
+                                hoverOffset: 8
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: { boxWidth: 10, usePointStyle: true, font: { size: 11, weight: '500' }, padding: 12 }
+                                }
+                            },
+                            cutout: '70%'
+                        }
+                    });
+                }
+
+                // Admin Role Chart
+                const ctxRole = document.getElementById('roleChart')?.getContext('2d');
+                if (ctxRole) {
+                    new Chart(ctxRole, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Admin', 'QA Manager', 'QA Coordinator', 'Customer'],
+                            datasets: [{
+                                label: 'Số tài khoản',
+                                data: [@Model.AdminCount, @Model.QAManagerCount, @Model.QACoordinatorCount, @Model.CustomerCount],
+                                backgroundColor: ['#f43f5e', '#f59e0b', '#a855f7', '#10b981'],
+                                borderRadius: 8,
+                                barThickness: 20
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            indexAxis: 'y',
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                x: {
+                                    beginAtZero: true,
+                                    grid: { color: '#f1f5f9' },
+                                    ticks: { stepSize: 1, precision: 0 }
+                                },
+                                y: {
+                                    grid: { display: false },
+                                    ticks: { font: { size: 12, weight: '600' } }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                // Admin Post Status Chart
+                const ctxStatus = document.getElementById('postStatusChart')?.getContext('2d');
+                if (ctxStatus) {
+                    new Chart(ctxStatus, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Đã xuất bản', 'Bản nháp / Ẩn'],
+                            datasets: [{
+                                data: [@Model.PublishedPosts, @Model.DraftPosts],
+                                backgroundColor: ['#10b981', '#cbd5e1'],
+                                borderWidth: 3,
+                                borderColor: '#ffffff',
+                                hoverOffset: 6
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: { boxWidth: 10, usePointStyle: true, font: { size: 11, weight: '500' }, padding: 10 }
+                                }
+                            },
+                            cutout: '68%'
+                        }
+                    });
+                }
+                </text>
+            }
+        });
+    </script>
+}
 

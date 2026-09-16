@@ -1,0 +1,120 @@
+@model IEnumerable<ContentManagementSystem.ApplicationCore.DTOs.DepartmentDto>
+
+@{
+    ViewData["Title"] = "Quản lý Phòng ban";
+    Layout = "_Layout";
+}
+
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">Quản lý Phòng ban</h2>
+            <p class="text-sm text-gray-500 mt-1">Danh sách phòng ban/khoa trực thuộc hệ thống, phân quyền duyệt bài cho QA Coordinator.</p>
+        </div>
+        <a asp-action="Create" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Thêm phòng ban mới
+        </a>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-center gap-3">
+            <svg class="w-5 h-5 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            <span>@TempData["SuccessMessage"]</span>
+        </div>
+    }
+
+    <!-- Data Table Card -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between gap-4">
+            <div class="relative w-full sm:w-80">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <input type="text" id="deptSearch" class="block w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" placeholder="Tìm kiếm phòng ban...">
+            </div>
+            <div class="flex items-center gap-2 text-sm text-gray-500">
+                <span>Tổng cộng: <strong class="text-gray-800 font-semibold">@(Model?.Count() ?? 0)</strong> phòng ban</span>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-50/75 text-gray-500 text-xs uppercase tracking-wider">
+                        <th class="px-6 py-3.5 font-semibold">Tên phòng ban / Khoa</th>
+                        <th class="px-6 py-3.5 font-semibold">Mô tả</th>
+                        <th class="px-6 py-3.5 font-semibold text-center">Thành viên</th>
+                        <th class="px-6 py-3.5 font-semibold text-center">Bài viết</th>
+                        <th class="px-6 py-3.5 font-semibold text-right">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 text-sm">
+                    @if (Model != null && Model.Any())
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr class="hover:bg-gray-50/75 transition-colors dept-row">
+                                <td class="px-6 py-4 font-semibold text-gray-800 dept-name">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
+                                            🏢
+                                        </div>
+                                        <div>
+                                            <span>@item.Name</span>
+                                            <div class="text-[11px] text-gray-400">Tạo ngày: @item.CreatedAt.ToString("dd/MM/yyyy")</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-gray-500 max-w-xs">
+                                    @(!string.IsNullOrEmpty(item.Description) ? item.Description : "—")
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
+                                        @item.MemberCount người
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700">
+                                        @item.PostCount bài
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <div class="inline-flex items-center gap-1">
+                                        <a asp-action="Edit" asp-route-id="@item.Id" class="p-1.5 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-all" title="Chỉnh sửa">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                        </a>
+                                        <a asp-action="Delete" asp-route-id="@item.Id" class="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-all" title="Xóa">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5" class="px-6 py-12 text-center text-gray-400">
+                                Chưa có phòng ban nào. Hãy bấm "Thêm phòng ban mới".
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('deptSearch')?.addEventListener('input', function(e) {
+        const val = e.target.value.toLowerCase().trim();
+        document.querySelectorAll('.dept-row').forEach(row => {
+            const text = row.querySelector('.dept-name')?.textContent.toLowerCase() || '';
+            row.style.display = text.includes(val) ? '' : 'none';
+        });
+    });
+</script>
+

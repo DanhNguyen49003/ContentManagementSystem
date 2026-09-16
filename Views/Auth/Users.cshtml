@@ -91,6 +91,7 @@
                     <tr class="bg-gray-50/75 border-b border-gray-200 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
                         <th class="py-3.5 px-5">Người dùng</th>
                         <th class="py-3.5 px-4">Vai trò (Role)</th>
+                        <th class="py-3.5 px-4">Phòng ban</th>
                         <th class="py-3.5 px-4">Trạng thái</th>
                         <th class="py-3.5 px-4">Ngày tạo</th>
                         <th class="py-3.5 px-5 text-right">Hành động</th>
@@ -100,7 +101,7 @@
                     @if (!Model.Any())
                     {
                         <tr>
-                            <td colspan="5" class="py-10 text-center text-gray-400">
+                            <td colspan="6" class="py-10 text-center text-gray-400">
                                 Không tìm thấy người dùng nào phù hợp.
                             </td>
                         </tr>
@@ -129,9 +130,9 @@
                                         var badgeColor = r switch
                                         {
                                             "Admin" => "bg-rose-50 text-rose-700 border-rose-200",
-                                            "Editor" => "bg-indigo-50 text-indigo-700 border-indigo-200",
-                                            "Author" => "bg-emerald-50 text-emerald-700 border-emerald-200",
-                                            "Moderator" => "bg-purple-50 text-purple-700 border-purple-200",
+                                            "QA Manager" => "bg-indigo-50 text-indigo-700 border-indigo-200",
+                                            "QA Coordinator" => "bg-sky-50 text-sky-700 border-sky-200",
+                                            "Customer" => "bg-emerald-50 text-emerald-700 border-emerald-200",
                                             _ => "bg-slate-100 text-slate-700 border-slate-200"
                                         };
                                         <span class="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-md border @badgeColor">
@@ -139,6 +140,18 @@
                                         </span>
                                     }
                                 </div>
+                            </td>
+                            <td class="py-3.5 px-4">
+                                @if (!string.IsNullOrEmpty(u.DepartmentName))
+                                {
+                                    <span class="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-md border bg-purple-50 text-purple-700 border-purple-200">
+                                        🏢 @u.DepartmentName
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-gray-400 italic text-[11px]">Chưa gán</span>
+                                }
                             </td>
                             <td class="py-3.5 px-4">
                                 <div class="flex flex-col gap-1 items-start">
