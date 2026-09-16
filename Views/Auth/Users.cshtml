@@ -5,6 +5,8 @@
     var allRoles = ViewBag.AllRoles as string[] ?? Array.Empty<string>();
     var selectedRole = ViewBag.SelectedRole as string;
     var search = ViewBag.Search as string;
+    var departments = ViewBag.Departments as IEnumerable<ContentManagementSystem.ApplicationCore.DTOs.DepartmentDto> ?? Enumerable.Empty<ContentManagementSystem.ApplicationCore.DTOs.DepartmentDto>();
+    var selectedDept = ViewBag.SelectedDepartmentId as string;
 }
 
 <div class="space-y-6">
@@ -12,16 +14,19 @@
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <h2 class="text-2xl font-bold text-gray-900 tracking-tight">Quản lý Người dùng & Phân quyền</h2>
-            <p class="text-sm text-gray-500 mt-1">Danh sách tất cả tài khoản trong hệ thống và phân công vai trò</p>
+            <p class="text-sm text-gray-500 mt-1">Danh sách tài khoản, vai trò và phân bổ phòng ban trực thuộc</p>
         </div>
         <div class="flex items-center gap-2">
+            <a asp-controller="Departments" asp-action="Index" class="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-xl shadow-sm transition-all">
+                <span>🏢</span> Quản lý Phòng ban
+            </a>
             <a asp-controller="Auth" asp-action="Roles" class="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-xl shadow-sm transition-all">
                 <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-                Xem các vai trò
+                Xem vai trò
             </a>
             <a asp-controller="Auth" asp-action="Register" class="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-500/20 transition-all">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                Thêm người dùng mới
+                Thêm người dùng
             </a>
         </div>
     </div>
@@ -52,7 +57,7 @@
                 <input type="text" name="search" value="@search" placeholder="Tìm theo email hoặc họ tên..." class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all" />
             </div>
 
-            <div class="w-full sm:w-48">
+            <div class="w-full sm:w-44">
                 <select name="role" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all">
                     <option value="">-- Tất cả vai trò --</option>
                     @foreach (var r in allRoles)
@@ -69,11 +74,23 @@
                 </select>
             </div>
 
+            <div class="w-full sm:w-52">
+                <select name="departmentId" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all">
+                    <option value="">-- Tất cả phòng ban --</option>
+                    <option value="admin" selected="@(selectedDept == "admin")">⚡ Toàn quyền (Admin)</option>
+                    <option value="none" selected="@(selectedDept == "none")">Chưa gán phòng ban</option>
+                    @foreach (var d in departments)
+                    {
+                        <option value="@d.Id" selected="@(selectedDept == d.Id.ToString())">🏢 @d.Name</option>
+                    }
+                </select>
+            </div>
+
             <div class="flex items-center gap-2 w-full sm:w-auto">
                 <button type="submit" class="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition-all shadow-sm">
                     Lọc
                 </button>
-                @if (!string.IsNullOrEmpty(search) || !string.IsNullOrEmpty(selectedRole))
+                @if (!string.IsNullOrEmpty(search) || !string.IsNullOrEmpty(selectedRole) || !string.IsNullOrEmpty(selectedDept))
                 {
                     <a asp-controller="Auth" asp-action="Users" class="w-full sm:w-auto px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-semibold rounded-xl text-center transition-all">
                         Xóa lọc
@@ -142,15 +159,34 @@
                                 </div>
                             </td>
                             <td class="py-3.5 px-4">
-                                @if (!string.IsNullOrEmpty(u.DepartmentName))
+                                @if (u.Roles.Contains("Admin"))
                                 {
-                                    <span class="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-md border bg-purple-50 text-purple-700 border-purple-200">
-                                        🏢 @u.DepartmentName
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-md border bg-rose-50 text-rose-700 border-rose-200 shadow-sm" title="Quản trị viên có toàn quyền truy cập tất cả phòng ban, không cần gán phòng ban">
+                                        <svg class="w-3 h-3 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                                        Toàn quyền (Tất cả PB)
                                     </span>
                                 }
                                 else
                                 {
-                                    <span class="text-gray-400 italic text-[11px]">Chưa gán</span>
+                                    <div class="flex items-center gap-2">
+                                        @if (!string.IsNullOrEmpty(u.DepartmentName))
+                                        {
+                                            <span class="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-md border bg-purple-50 text-purple-700 border-purple-200">
+                                                🏢 @u.DepartmentName
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-gray-400 italic text-[11px]">Chưa gán</span>
+                                        }
+
+                                        @if (User.IsInRole("Admin"))
+                                        {
+                                            <button type="button" onclick="openDeptModal('@u.Id', '@(Uri.EscapeDataString(u.FullName ?? u.Email))', '@(u.DepartmentId?.ToString() ?? "")')" class="text-[10px] text-blue-600 hover:text-blue-800 font-semibold underline hover:bg-blue-50 px-1 py-0.5 rounded transition-colors" title="Chỉnh sửa phòng ban cho người này">
+                                                Đổi PB
+                                            </button>
+                                        }
+                                    </div>
                                 }
                             </td>
                             <td class="py-3.5 px-4">
@@ -202,8 +238,8 @@
                                         </form>
                                     }
 
-                                    <!-- Phân quyền -->
-                                    <a asp-controller="Auth" asp-action="AssignRole" asp-route-id="@u.Id" class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold rounded-lg transition-colors text-[11px]" title="Đổi vai trò">
+                                    <!-- Phân quyền & Phòng ban -->
+                                    <a asp-controller="Auth" asp-action="AssignRole" asp-route-id="@u.Id" class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold rounded-lg transition-colors text-[11px]" title="Đổi vai trò & phòng ban">
                                         Phân quyền
                                     </a>
 
@@ -231,4 +267,59 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Đổi phòng ban nhanh dành cho Admin -->
+<div id="deptModal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-gray-100">
+        <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+            <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                <span>🏢</span> Phân bổ Phòng ban cho Thành viên
+            </h3>
+            <button type="button" onclick="closeDeptModal()" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg">
+                ✕
+            </button>
+        </div>
+        <form asp-controller="Auth" asp-action="UpdateDepartment" method="post" class="space-y-4">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="userId" id="modalUserId" />
+            <div class="p-3 bg-gray-50 rounded-xl">
+                <p class="text-[11px] text-gray-500">Đang điều chỉnh phòng ban cho tài khoản:</p>
+                <p class="text-xs font-bold text-gray-800 mt-0.5" id="modalUserName"></p>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Chọn Phòng ban / Khoa</label>
+                <select name="departmentId" id="modalDeptSelect" class="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all">
+                    <option value="">-- Chưa gán phòng ban (Chung) --</option>
+                    @foreach (var d in departments)
+                    {
+                        <option value="@d.Id">🏢 @d.Name</option>
+                    }
+                </select>
+                <p class="text-[11px] text-gray-400 mt-2 leading-relaxed">
+                    * Quyền hạn duyệt bài của <strong>QA Coordinator</strong> sẽ giới hạn trong phòng ban được chọn tại đây.
+                </p>
+            </div>
+            <div class="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
+                <button type="button" onclick="closeDeptModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition-all">
+                    Hủy
+                </button>
+                <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/20 transition-all">
+                    Lưu phân bổ
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openDeptModal(userId, userName, currentDeptId) {
+        document.getElementById('modalUserId').value = userId;
+        document.getElementById('modalUserName').textContent = decodeURIComponent(userName);
+        document.getElementById('modalDeptSelect').value = currentDeptId;
+        document.getElementById('deptModal').classList.remove('hidden');
+    }
+    function closeDeptModal() {
+        document.getElementById('deptModal').classList.add('hidden');
+    }
+</script>
 

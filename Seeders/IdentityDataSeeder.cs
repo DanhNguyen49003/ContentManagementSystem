@@ -112,7 +112,8 @@ namespace ContentManagementSystem.Seeders
             }
 
             // 3. Seed Default Users for each of the 4 roles
-            await SeedUserAsync(userManager, "admin@cms.com", "Admin@123", "Quản trị viên", "Admin", itDepartmentId);
+            // Admin không cần phòng ban (toàn quyền trên tất cả phòng ban)
+            await SeedUserAsync(userManager, "admin@cms.com", "Admin@123", "Quản trị viên", "Admin", null);
             await SeedUserAsync(userManager, "qamanager@cms.com", "Manager@123", "Trưởng ban QA", "QA Manager", null);
             await SeedUserAsync(userManager, "qacoordinator@cms.com", "Coord@123", "Điều phối viên QA (Khoa CNTT)", "QA Coordinator", itDepartmentId);
             await SeedUserAsync(userManager, "customer@cms.com", "Customer@123", "Khách hàng", "Customer", itDepartmentId);
@@ -169,7 +170,16 @@ namespace ContentManagementSystem.Seeders
 
                 // Đảm bảo tài khoản đã kích hoạt, không bị khóa
                 bool needUpdate = false;
-                if (departmentId != null && user.DepartmentId != departmentId)
+                if (role == "Admin")
+                {
+                    // Admin luôn có toàn quyền, không gắn vào phòng ban cố định nào
+                    if (user.DepartmentId != null)
+                    {
+                        user.DepartmentId = null;
+                        needUpdate = true;
+                    }
+                }
+                else if (departmentId != null && user.DepartmentId != departmentId)
                 {
                     user.DepartmentId = departmentId;
                     needUpdate = true;

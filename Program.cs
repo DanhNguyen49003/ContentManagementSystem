@@ -18,10 +18,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 builder.Services.AddMemoryCache();
-builder.Services.AddResponseCompression(options =>
-{
-    options.EnableForHttps = true;
-});
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
 // ===== 2. Email Sender Configuration =====
@@ -199,7 +195,6 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
-app.UseResponseCompression();
 app.UseStaticFiles(new StaticFileOptions
 {
     OnPrepareResponse = ctx =>

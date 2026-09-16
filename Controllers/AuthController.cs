@@ -548,7 +548,7 @@ namespace ContentManagementSystem.Controllers
         // GET: /Auth/Users
         [Authorize(Roles = "Admin,QA Manager")]
         [HttpGet]
-        public async Task<IActionResult> Users(string? search = null, string? role = null)
+        public async Task<IActionResult> Users(string? search = null, string? role = null, string? departmentId = null)
         {
             var users = await _userManager.Users.OrderByDescending(u => u.CreatedAt).ToListAsync();
             var userList = new List<UserManagementViewModel>();
@@ -574,6 +574,26 @@ namespace ContentManagementSystem.Controllers
                     continue;
                 }
 
+                // Lọc theo phòng ban
+                if (!string.IsNullOrWhiteSpace(departmentId))
+                {
+                    if (departmentId.Equals("admin", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Lọc tài khoản Admin (Toàn quyền tất cả phòng ban)
+                        if (!roles.Contains("Admin")) continue;
+                    }
+                    else if (departmentId.Equals("none", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Lọc tài khoản chưa gán phòng ban (loại trừ Admin vì Admin toàn quyền)
+                        if (user.DepartmentId.HasValue || roles.Contains("Admin")) continue;
+                    }
+                    else if (Guid.TryParse(departmentId, out var deptGuid))
+                    {
+                        // Lọc tài khoản thuộc phòng ban cụ thể
+                        if (!user.DepartmentId.HasValue || user.DepartmentId.Value != deptGuid) continue;
+                    }
+                }
+
                 userList.Add(new UserManagementViewModel
                 {
                     Id = user.Id,
@@ -591,7 +611,9 @@ namespace ContentManagementSystem.Controllers
 
             ViewBag.Search = search;
             ViewBag.SelectedRole = role;
+            ViewBag.SelectedDepartmentId = departmentId;
             ViewBag.AllRoles = IdentityDataSeeder.Roles;
+            ViewBag.Departments = departments;
 
             return View(userList);
         }
@@ -670,11 +692,66 @@ namespace ContentManagementSystem.Controllers
                 return View(model);
             }
 
-            // Cập nhật phòng ban trực thuộc
-            user.DepartmentId = model.SelectedDepartmentId;
+            // Cập nhật phòng ban trực thuộc:
+            // Nếu là Admin -> Admin có toàn quyền tất cả phòng ban nên DepartmentId = null
+            if (model.SelectedRole == "Admin")
+            {
+                user.DepartmentId = null;
+            }
+            else
+            {
+                user.DepartmentId = model.SelectedDepartmentId;
+            }
             await _userManager.UpdateAsync(user);
 
             TempData["SuccessMessage"] = $"Đã cập nhật vai trò [{model.SelectedRole}] và phòng ban cho người dùng {user.Email} thành công!";
+            return RedirectToAction(nameof(Users));
+        }
+
+        // POST: /Auth/UpdateDepartment
+        // Cho phép Admin trực tiếp gán / điều chỉnh phòng ban cho người khác từ bảng người dùng
+        [Authorize(Roles = "Admin")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateDepartment(string userId, Guid? departmentId)
+        {
+            if (string.IsNullOrEmpty(userId))
+            {
+                return NotFound("Mã người dùng không hợp lệ.");
+            }
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return NotFound("Không tìm thấy người dùng.");
+            }
+
+            var roles = await _userManager.GetRolesAsync(user);
+            if (roles.Contains("Admin"))
+            {
+                user.DepartmentId = null;
+                await _userManager.UpdateAsync(user);
+                TempData["SuccessMessage"] = $"Tài khoản {user.Email} là Quản trị viên (Admin), mặc định có toàn quyền trên tất cả phòng ban!";
+                return RedirectToAction(nameof(Users));
+            }
+
+            user.DepartmentId = departmentId;
+            var result = await _userManager.UpdateAsync(user);
+            if (result.Succeeded)
+            {
+                string deptName = "Chưa gán (Chung)";
+                if (departmentId.HasValue)
+                {
+                    var dept = await _departmentService.GetByIdAsync(departmentId.Value);
+                    if (dept != null) deptName = dept.Name;
+                }
+                TempData["SuccessMessage"] = $"Đã phân bổ phòng ban [{deptName}] cho người dùng {user.Email} thành công!";
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "Có lỗi xảy ra khi cập nhật phòng ban.";
+            }
+
             return RedirectToAction(nameof(Users));
         }
 

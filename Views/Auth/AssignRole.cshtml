@@ -46,21 +46,21 @@
                         var isChecked = role.Equals(Model.SelectedRole, StringComparison.OrdinalIgnoreCase);
                         var roleDesc = role switch
                         {
-                            "Admin" => "Toàn quyền quản trị: Quản lý người dùng, phân quyền vai trò, cài đặt giao diện, bài viết và bảo mật.",
-                            "QA Manager" => "Trưởng ban QA: Phê duyệt bài viết, kiểm soát chất lượng nội dung, quản lý tiêu chuẩn xuất bản và báo cáo.",
-                            "QA Coordinator" => "Điều phối viên QA: Tiếp nhận, đánh giá bài viết mới từ khách hàng và điều phối quy trình duyệt.",
-                            "Customer" => "Khách hàng / Thành viên: Tạo và đóng góp bài viết, gửi bài chờ kiểm duyệt và quản lý thông tin cá nhân.",
+                            "Admin" => "Toàn quyền quản trị hệ thống: Quản lý người dùng, phân bổ phòng ban, truy cập và can thiệp toàn bộ dữ liệu tất cả phòng ban (không giới hạn phòng ban).",
+                            "QA Manager" => "Trưởng ban QA: Quản trị chất lượng nội dung toàn diện, xem báo cáo tổng thể và tiêu chuẩn kiểm duyệt.",
+                            "QA Coordinator" => "Điều phối viên QA: Tiếp nhận, đánh giá và phê duyệt bài viết thuộc đúng phòng ban/khoa được phân bổ phụ trách.",
+                            "Customer" => "Khách hàng / Tác giả: Đóng góp bài viết và nội dung thuộc phòng ban/khoa của mình.",
                             _ => "Người dùng hệ thống."
                         };
 
                         <label class="flex items-start gap-3 p-4 border rounded-xl cursor-pointer transition-all hover:bg-gray-50/80 @(isChecked ? "border-blue-500 bg-blue-50/20 ring-1 ring-blue-500/30" : "border-gray-200")">
-                            <input type="radio" asp-for="SelectedRole" value="@role" class="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500" />
+                            <input type="radio" asp-for="SelectedRole" value="@role" class="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 role-radio" onchange="onRoleChanged(this.value)" />
                             <div class="min-w-0">
                                 <div class="flex items-center gap-2">
                                     <span class="text-sm font-bold text-gray-900">@role</span>
                                     @if (role == "Admin")
                                     {
-                                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-700">Cao nhất</span>
+                                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-700">Toàn quyền</span>
                                     }
                                 </div>
                                 <p class="text-xs text-gray-500 mt-1 leading-relaxed">@roleDesc</p>
@@ -71,21 +71,31 @@
                 <span asp-validation-for="SelectedRole" class="text-xs text-rose-500 mt-1 block"></span>
             </div>
 
-            <!-- Chọn phòng ban phụ trách -->
-            <div class="p-4 rounded-xl bg-purple-50/50 border border-purple-100 space-y-2">
+            <!-- Thông báo khi chọn vai trò Admin -->
+            <div id="adminDeptNotice" class="p-4 rounded-xl bg-rose-50/70 border border-rose-200/80 space-y-1.5 hidden">
+                <div class="flex items-center gap-2 text-rose-800 font-bold text-xs uppercase tracking-wider">
+                    <span>👑</span> Quản trị viên (Admin) không cần gán phòng ban
+                </div>
+                <p class="text-xs text-rose-700 leading-relaxed">
+                    Tài khoản <strong>Admin</strong> mặc định có quyền hạn tối cao: có thể truy cập, xem, duyệt bài và chỉnh sửa phân bổ phòng ban của <strong>tất cả người dùng</strong> trong toàn hệ thống.
+                </p>
+            </div>
+
+            <!-- Chọn phòng ban phụ trách (Dành cho QA Coordinator, Customer, QA Manager) -->
+            <div id="deptSelectContainer" class="p-4 rounded-xl bg-purple-50/50 border border-purple-100 space-y-2">
                 <label asp-for="SelectedDepartmentId" class="block text-xs font-bold text-purple-900 uppercase tracking-wider flex items-center gap-1.5">
                     <span>🏢</span> Phân bổ Phòng ban / Khoa phụ trách
                 </label>
                 <p class="text-xs text-gray-500 leading-relaxed">
-                    Đặc biệt quan trọng đối với <strong>QA Coordinator</strong>: Chỉ có thể duyệt các bài viết thuộc đúng phòng ban được phân bổ tại đây.
+                    Đặc biệt quan trọng đối với <strong>QA Coordinator</strong>: Chỉ có quyền duyệt các bài viết thuộc đúng phòng ban được phân bổ tại đây.
                 </p>
-                <select asp-for="SelectedDepartmentId" class="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-purple-600 focus:border-transparent transition-all">
+                <select asp-for="SelectedDepartmentId" id="deptSelect" class="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-purple-600 focus:border-transparent transition-all">
                     <option value="">-- Chưa gán phòng ban (Chung) --</option>
                     @if (Model.AvailableDepartments != null)
                     {
                         @foreach (var dept in Model.AvailableDepartments)
                         {
-                            <option value="@dept.Id">@dept.Name</option>
+                            <option value="@dept.Id">🏢 @dept.Name</option>
                         }
                     }
                 </select>
@@ -97,10 +107,35 @@
                     &larr; Quay lại danh sách Người dùng
                 </a>
                 <button type="submit" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-500/20 transition-all">
-                    Cập nhật vai trò
+                    Lưu phân quyền & phòng ban
                 </button>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+    function onRoleChanged(role) {
+        const adminNotice = document.getElementById('adminDeptNotice');
+        const deptContainer = document.getElementById('deptSelectContainer');
+        const deptSelect = document.getElementById('deptSelect');
+
+        if (role === 'Admin') {
+            adminNotice?.classList.remove('hidden');
+            if (deptContainer) deptContainer.classList.add('opacity-50');
+            if (deptSelect) deptSelect.value = '';
+        } else {
+            adminNotice?.classList.add('hidden');
+            if (deptContainer) deptContainer.classList.remove('opacity-50');
+        }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkedRole = document.querySelector('input[name="SelectedRole"]:checked')?.value;
+        if (checkedRole) {
+            onRoleChanged(checkedRole);
+        }
+    });
+</script>
 

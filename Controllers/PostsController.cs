@@ -80,13 +80,21 @@ namespace ContentManagementSystem.Controllers
         }
 
         // GET: Posts
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(Guid? departmentId = null)
         {
             var posts = await _postService.GetAllAsync();
+            var departments = await _departmentService.GetAllAsync();
+
+            if (departmentId.HasValue)
+            {
+                posts = posts.Where(p => p.DepartmentId == departmentId.Value).ToList();
+            }
 
             var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             var currentUser = !string.IsNullOrEmpty(currentUserId) ? await _userManager.FindByIdAsync(currentUserId) : null;
             ViewBag.UserDepartmentId = currentUser?.DepartmentId;
+            ViewBag.Departments = departments;
+            ViewBag.SelectedDepartmentId = departmentId;
 
             return View(posts);
         }

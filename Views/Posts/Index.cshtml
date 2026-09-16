@@ -37,21 +37,46 @@
     <!-- Data Table Card -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <!-- Action Bar -->
-        <div class="p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between gap-4">
-            <div class="relative w-full sm:w-80">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <div class="p-5 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto flex-1">
+                <div class="relative w-full sm:w-72">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    </div>
+                    <input type="text" id="postSearch" class="block w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" placeholder="Tìm kiếm bài viết...">
                 </div>
-                <input type="text" id="postSearch" class="block w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" placeholder="Tìm kiếm bài viết...">
+
+                <!-- Lọc theo phòng ban -->
+                @{
+                    var depts = ViewBag.Departments as IEnumerable<ContentManagementSystem.ApplicationCore.DTOs.DepartmentDto> ?? Enumerable.Empty<ContentManagementSystem.ApplicationCore.DTOs.DepartmentDto>();
+                    var selDept = ViewBag.SelectedDepartmentId as Guid?;
+                }
+                <div class="w-full sm:w-56">
+                    <select onchange="window.location.href = this.value ? '/Posts?departmentId=' + this.value : '/Posts';" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all">
+                        <option value="">🏢 -- Tất cả phòng ban --</option>
+                        @foreach (var d in depts)
+                        {
+                            if (selDept == d.Id)
+                            {
+                                <option value="@d.Id" selected>🏢 @d.Name</option>
+                            }
+                            else
+                            {
+                                <option value="@d.Id">🏢 @d.Name</option>
+                            }
+                        }
+                    </select>
+                </div>
             </div>
-            <div class="flex items-center gap-4 text-xs">
+
+            <div class="flex items-center gap-3 text-xs flex-wrap">
                 <span class="px-2.5 py-1 bg-green-50 text-green-700 rounded-lg font-medium">
                     Đã xuất bản: @(Model?.Count(p => p.IsPublished) ?? 0)
                 </span>
                 <span class="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-lg font-medium">
                     Bản nháp: @(Model?.Count(p => !p.IsPublished) ?? 0)
                 </span>
-                <span class="text-gray-500">Tổng cộng: <strong class="text-gray-800 font-semibold">@(Model?.Count() ?? 0)</strong></span>
+                <span class="text-gray-500">Tổng: <strong class="text-gray-800 font-semibold">@(Model?.Count() ?? 0)</strong></span>
             </div>
         </div>
 
@@ -77,7 +102,7 @@
                             bool isCoordinator = User.IsInRole("QA Coordinator");
                             Guid? userDeptId = ViewBag.UserDepartmentId as Guid?;
                             bool canApprove = isAdmin || (isCoordinator && userDeptId.HasValue && post.DepartmentId.HasValue && post.DepartmentId.Value == userDeptId.Value);
-                            bool isOtherDept = isCoordinator && (!userDeptId.HasValue || !post.DepartmentId.HasValue || post.DepartmentId.Value != userDeptId.Value);
+                            bool isOtherDept = !isAdmin && isCoordinator && (!userDeptId.HasValue || !post.DepartmentId.HasValue || post.DepartmentId.Value != userDeptId.Value);
 
                             <tr class="hover:bg-gray-50/75 transition-colors post-row">
                                 <td class="px-6 py-4">
