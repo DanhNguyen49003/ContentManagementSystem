@@ -134,11 +134,9 @@ namespace ContentManagementSystem.Controllers
             var currentUserName = User.Identity?.Name;
             var currentUser = !string.IsNullOrEmpty(currentUserId) ? await _userManager.FindByIdAsync(currentUserId) : null;
 
-            var allPosts = await _postService.GetAllAsync();
-            var myPosts = allPosts.Where(p =>
-                (!string.IsNullOrEmpty(currentUserId) && string.Equals(p.AuthorId, currentUserId, StringComparison.OrdinalIgnoreCase)) ||
-                (!string.IsNullOrEmpty(currentUserName) && string.Equals(p.AuthorName, currentUserName, StringComparison.OrdinalIgnoreCase))
-            ).ToList();
+            var myPosts = !string.IsNullOrEmpty(currentUserId) 
+                ? await _postService.GetByAuthorIdAsync(currentUserId) 
+                : new List<PostDto>();
 
             // Thống kê số lượng theo từng trạng thái
             ViewBag.CountAll = myPosts.Count;

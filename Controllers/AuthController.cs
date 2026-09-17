@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -10,8 +12,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using ContentManagementSystem.ApplicationCore.DTOs;
 using ContentManagementSystem.ApplicationCore.Entities.Identity;
 using ContentManagementSystem.Seeders;
@@ -34,6 +38,7 @@ namespace ContentManagementSystem.Controllers
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly ILogger<AuthController> _logger;
         private readonly IMemoryCache _memoryCache;
+        private readonly IConfiguration _configuration;
 
         public AuthController(
             UserManager<ContentUser> userManager,
@@ -45,7 +50,8 @@ namespace ContentManagementSystem.Controllers
             IOptions<EmailSettings> emailOptions,
             IWebHostEnvironment webHostEnvironment,
             ILogger<AuthController> logger,
-            IMemoryCache memoryCache)
+            IMemoryCache memoryCache,
+            IConfiguration configuration)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -57,6 +63,7 @@ namespace ContentManagementSystem.Controllers
             _webHostEnvironment = webHostEnvironment;
             _logger = logger;
             _memoryCache = memoryCache;
+            _configuration = configuration;
         }
 
         // ==========================================
@@ -173,12 +180,17 @@ namespace ContentManagementSystem.Controllers
 
             model.Email = model.Email?.Trim() ?? string.Empty;
 
-            // 1. Tự động đồng bộ mật khẩu & vai trò cho 4 tài khoản gợi ý (Admin, QA Manager, QA Coordinator, Customer)
-            await EnsureDemoAccountAsync(model.Email, model.Password);
-
-            // 2. Tìm người dùng theo Email hoặc UserName
+            // 1. Tìm người dùng theo Email hoặc UserName (1 roundtrip DB duy nhất)
             var user = await _userManager.FindByEmailAsync(model.Email) 
                 ?? await _userManager.FindByNameAsync(model.Email);
+
+            // 2. Dự phòng tài khoản demo: Chỉ chạy EnsureDemoAccountAsync khi tài khoản demo chưa có trong DB
+            if (user == null && DemoAccounts.ContainsKey(model.Email))
+            {
+                await EnsureDemoAccountAsync(model.Email, model.Password);
+                user = await _userManager.FindByEmailAsync(model.Email) 
+                    ?? await _userManager.FindByNameAsync(model.Email);
+            }
 
             if (user == null)
             {
@@ -186,12 +198,22 @@ namespace ContentManagementSystem.Controllers
                 return View(model);
             }
 
-            // 3. Kiểm tra mật khẩu
+            // 3. Kiểm tra mật khẩu (1 lần tính toán mã hóa duy nhất)
             var isPasswordValid = await _userManager.CheckPasswordAsync(user, model.Password);
             if (!isPasswordValid)
             {
-                ModelState.AddModelError(string.Empty, "Email hoặc mật khẩu không chính xác.");
-                return View(model);
+                // Dự phòng tài khoản demo: Nếu sai mật khẩu nhưng là tài khoản demo thì đồng bộ lại mật khẩu
+                if (DemoAccounts.TryGetValue(model.Email, out var demo) && demo.Password == model.Password)
+                {
+                    await EnsureDemoAccountAsync(model.Email, model.Password);
+                    isPasswordValid = await _userManager.CheckPasswordAsync(user, model.Password);
+                }
+
+                if (!isPasswordValid)
+                {
+                    ModelState.AddModelError(string.Empty, "Email hoặc mật khẩu không chính xác.");
+                    return View(model);
+                }
             }
 
             // 4. Kiểm tra trạng thái xác thực Email qua mã OTP
@@ -231,41 +253,127 @@ namespace ContentManagementSystem.Controllers
                 await _userManager.UpdateAsync(user);
             }
 
-            // 5. Đăng nhập thành công vào phiên Cookie của ứng dụng Web
-            await _signInManager.SignInAsync(user, isPersistent: model.RememberMe);
+            // 5. Lấy danh sách Roles người dùng (1 query DB duy nhất)
+            var roles = await _userManager.GetRolesAsync(user);
 
-            // 6. Thử lấy token JWT từ API nếu có, không chặn nếu API độc lập chưa chạy
-            try
+            // 6. Sinh mã token JWT trực tiếp trên RAM máy chủ (0ms, không gọi HTTP API độc lập)
+            var jwtToken = GenerateJwtToken(user, roles);
+
+            // 7. Đăng nhập 1 LẦN DUY NHẤT với claim access_token lưu trực tiếp trong Session Cookie
+            // (Không ghi chèn vào bảng AspNetUserClaims trên cơ sở dữ liệu từ xa -> tiết kiệm hàng giây độ trễ)
+            await _signInManager.SignInWithClaimsAsync(user, isPersistent: model.RememberMe, new[]
             {
-                var loginResponse = await _apiClient.PostAsync<LoginRequestDto, LoginResponseDto>("api/auth/login", new LoginRequestDto
-                {
-                    Email = model.Email,
-                    Password = model.Password
-                });
+                new Claim("access_token", jwtToken)
+            });
 
-                if (loginResponse != null && !string.IsNullOrEmpty(loginResponse.Token))
-                {
-                    var userClaims = await _userManager.GetClaimsAsync(user);
-                    var oldTokenClaim = userClaims.FirstOrDefault(c => c.Type == "access_token");
-                    if (oldTokenClaim != null)
-                    {
-                        await _userManager.RemoveClaimAsync(user, oldTokenClaim);
-                    }
-                    await _userManager.AddClaimAsync(user, new System.Security.Claims.Claim("access_token", loginResponse.Token));
-                    await _signInManager.SignInAsync(user, isPersistent: model.RememberMe);
-                }
-            }
-            catch
-            {
-                // Bỏ qua lỗi kết nối API client khi đang chạy Web độc lập
-            }
+            // 8. Làm ấm Cache thông tin người dùng trên RAM máy chủ (giúp Layout/Home load trong 0ms)
+            WarmupUserProfileCache(user, roles);
 
-            _logger.LogInformation("Người dùng {Email} đăng nhập thành công.", model.Email);
+            _logger.LogInformation("Người dùng {Email} đăng nhập thành công siêu tốc.", model.Email);
             if (Url.IsLocalUrl(returnUrl))
             {
                 return Redirect(returnUrl);
             }
             return RedirectToAction("Index", "Home");
+        }
+
+        private string GenerateJwtToken(ContentUser user, IList<string> roles)
+        {
+            var jwtSection = _configuration.GetSection("JwtSettings");
+            var secretKey = jwtSection["SecretKey"] ?? "SuperSecretKeyForCMSPortalJwtTokenAuthentication2026!#";
+            var issuer = jwtSection["Issuer"] ?? "CMSPortalAPI";
+            var audience = jwtSection["Audience"] ?? "CMSPortalClients";
+            var expiryMinutes = int.TryParse(jwtSection["ExpiryMinutes"], out var minutes) ? minutes : 1440;
+
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
+                new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
+                new Claim(ClaimTypes.Name, user.FullName ?? user.Email ?? string.Empty),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
+
+            foreach (var role in roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var expires = DateTime.UtcNow.AddMinutes(expiryMinutes);
+
+            var token = new JwtSecurityToken(
+                issuer: issuer,
+                audience: audience,
+                claims: claims,
+                expires: expires,
+                signingCredentials: credentials);
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        private void WarmupUserProfileCache(ContentUser user, IList<string> roles)
+        {
+            try
+            {
+                var dto = new CurrentUserDto
+                {
+                    Id = user.Id,
+                    Email = user.Email ?? string.Empty,
+                    DisplayName = !string.IsNullOrWhiteSpace(user.FullName)
+                        ? user.FullName
+                        : (!string.IsNullOrWhiteSpace(user.UserName) ? user.UserName : (user.Email ?? "User")),
+                    Avatar = user.Avatar ?? string.Empty,
+                    DepartmentId = user.DepartmentId,
+                    IsAuthenticated = true
+                };
+
+                dto.IsAdmin = roles.Contains("Admin", StringComparer.OrdinalIgnoreCase)
+                              || string.Equals(user.Email, "admin@cms.com", StringComparison.OrdinalIgnoreCase);
+                dto.IsQAManager = roles.Contains("QA Manager", StringComparer.OrdinalIgnoreCase);
+                dto.IsQACoordinator = roles.Contains("QA Coordinator", StringComparer.OrdinalIgnoreCase);
+                dto.IsCustomer = roles.Contains("Customer", StringComparer.OrdinalIgnoreCase);
+
+                if (dto.IsAdmin)
+                {
+                    dto.RoleName = "Admin";
+                    dto.RoleBadgeClass = "bg-rose-100 text-rose-700";
+                    dto.DepartmentName = "Toàn hệ thống";
+                }
+                else if (dto.IsQAManager)
+                {
+                    dto.RoleName = "QA Manager";
+                    dto.RoleBadgeClass = "bg-amber-100 text-amber-700";
+                }
+                else if (dto.IsQACoordinator)
+                {
+                    dto.RoleName = "QA Coordinator";
+                    dto.RoleBadgeClass = "bg-purple-100 text-purple-700";
+                }
+                else
+                {
+                    dto.RoleName = "Customer";
+                    dto.RoleBadgeClass = "bg-emerald-100 text-emerald-700";
+                }
+
+                var cacheTime = TimeSpan.FromMinutes(10);
+                if (!string.IsNullOrEmpty(user.Id))
+                {
+                    _memoryCache.Set($"CurrentUserProfile_{user.Id}", dto, cacheTime);
+                }
+                if (!string.IsNullOrEmpty(user.UserName))
+                {
+                    _memoryCache.Set($"CurrentUserProfile_{user.UserName}", dto, cacheTime);
+                }
+                if (!string.IsNullOrEmpty(user.Email))
+                {
+                    _memoryCache.Set($"CurrentUserProfile_{user.Email}", dto, cacheTime);
+                }
+            }
+            catch
+            {
+                // Cache warmup is best-effort
+            }
         }
 
         // GET: /Auth/Register
@@ -509,8 +617,14 @@ namespace ContentManagementSystem.Controllers
             _memoryCache.Remove(attemptsKey);
             _memoryCache.Remove($"Register_OTP_Cooldown_{emailKey}");
 
-            // 3. Tự động đăng nhập người dùng
-            await _signInManager.SignInAsync(user, isPersistent: false);
+            // 3. Tự động đăng nhập người dùng siêu tốc
+            var roles = await _userManager.GetRolesAsync(user);
+            var jwtToken = GenerateJwtToken(user, roles);
+            await _signInManager.SignInWithClaimsAsync(user, isPersistent: false, new[]
+            {
+                new Claim("access_token", jwtToken)
+            });
+            WarmupUserProfileCache(user, roles);
 
             _logger.LogInformation("Người dùng {Email} đã xác thực mã OTP thành công và đăng nhập.", user.Email);
             TempData["SuccessMessage"] = "Xác thực OTP thành công! Chào mừng bạn gia nhập CMS Portal.";

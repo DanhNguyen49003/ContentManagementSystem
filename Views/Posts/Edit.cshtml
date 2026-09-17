@@ -179,23 +179,29 @@
                     </div>
 
                     <!-- Đăng ẩn danh Toggle -->
-                    <div class="p-4 rounded-2xl bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 flex items-center justify-between gap-3">
+                    <div id="anonToggleCard" onclick="toggleAnonymousCard(event)" class="p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 select-none flex items-center justify-between gap-3 bg-white border-gray-200 hover:border-purple-300">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-xl flex-shrink-0 shadow-xs">
+                            <div id="anonIconBox" class="w-10 h-10 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center text-xl flex-shrink-0 transition-all">
                                 🎭
                             </div>
                             <div>
-                                <label for="isAnonymousCheck" class="text-sm font-bold text-gray-900 cursor-pointer flex items-center gap-1.5">
-                                    <span>Đăng bài ẩn danh</span>
-                                    <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-purple-200 text-purple-800">Riêng tư</span>
-                                </label>
-                                <p class="text-[11px] text-gray-500 mt-0.5">Ẩn danh tính thành <strong>"Người dùng ẩn danh"</strong> đối với bạn đọc.</p>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-bold text-gray-900">Đăng bài ẩn danh</span>
+                                    <span id="anonStatusBadge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full transition-all">
+                                        @(Model.IsAnonymous ? "🟣 Đang BẬT (Ẩn danh)" : "⚪ Đang TẮT (Công khai tên)")
+                                    </span>
+                                </div>
+                                <p id="anonHintText" class="text-[11px] text-gray-500 mt-0.5 transition-all">
+                                    @(Model.IsAnonymous ? "Danh tính tác giả được ẩn. Bạn đọc sẽ chỉ thấy \"🎭 Người dùng ẩn danh\"." : "Hiển thị tên thật của bạn công khai cho tất cả độc giả cùng thấy.")
+                                </p>
                             </div>
                         </div>
-                        <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
-                            <input asp-for="IsAnonymous" type="checkbox" id="isAnonymousCheck" class="sr-only peer" />
-                            <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                        </label>
+                        <div class="relative inline-flex items-center flex-shrink-0">
+                            <input asp-for="IsAnonymous" type="checkbox" id="isAnonymousCheck" class="sr-only" onchange="updateAnonymousUI()" />
+                            <div id="anonSwitchTrack" class="w-12 h-6 bg-gray-300 rounded-full transition-colors relative">
+                                <div id="anonSwitchThumb" class="w-5 h-5 bg-white rounded-full shadow-md absolute top-0.5 left-0.5 transition-transform duration-200"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -439,7 +445,60 @@
             return str.trim();
         }
 
-        document.addEventListener('DOMContentLoaded', updateSelectedCount);
+        // Anonymous Toggle Logic
+        function toggleAnonymousCard(e) {
+            if (e && e.target && e.target.id === 'isAnonymousCheck') return;
+            const chk = document.getElementById('isAnonymousCheck');
+            if (chk) {
+                chk.checked = !chk.checked;
+                updateAnonymousUI();
+            }
+        }
+
+        function updateAnonymousUI() {
+            const chk = document.getElementById('isAnonymousCheck');
+            const card = document.getElementById('anonToggleCard');
+            const iconBox = document.getElementById('anonIconBox');
+            const badge = document.getElementById('anonStatusBadge');
+            const hint = document.getElementById('anonHintText');
+            const track = document.getElementById('anonSwitchTrack');
+            const thumb = document.getElementById('anonSwitchThumb');
+
+            if (!chk || !card) return;
+
+            if (chk.checked) {
+                // Active ON State
+                card.className = "p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 select-none flex items-center justify-between gap-3 bg-gradient-to-r from-purple-50 via-indigo-50 to-purple-50 border-purple-400 ring-2 ring-purple-300/40 shadow-sm";
+                if (iconBox) iconBox.className = "w-10 h-10 rounded-xl bg-purple-600 text-white shadow-md shadow-purple-200 flex items-center justify-center text-xl flex-shrink-0 transition-all";
+                if (badge) {
+                    badge.className = "text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-purple-600 text-white shadow-xs transition-all";
+                    badge.innerHTML = "🟣 Đang BẬT (Ẩn danh)";
+                }
+                if (hint) {
+                    hint.innerHTML = "Danh tính tác giả được ẩn. Bạn đọc sẽ chỉ thấy <strong class=\"text-purple-700\">\"🎭 Người dùng ẩn danh\"</strong>.";
+                }
+                if (track) track.className = "w-12 h-6 bg-purple-600 rounded-full transition-colors relative";
+                if (thumb) thumb.className = "w-5 h-5 bg-white rounded-full shadow-md absolute top-0.5 left-0.5 transform translate-x-6 transition-transform duration-200";
+            } else {
+                // Inactive OFF State
+                card.className = "p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 select-none flex items-center justify-between gap-3 bg-white border-gray-200 hover:border-gray-300";
+                if (iconBox) iconBox.className = "w-10 h-10 rounded-xl bg-gray-100 text-gray-400 flex items-center justify-center text-xl flex-shrink-0 transition-all";
+                if (badge) {
+                    badge.className = "text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200 transition-all";
+                    badge.innerHTML = "⚪ Đang TẮT (Công khai tên)";
+                }
+                if (hint) {
+                    hint.innerHTML = "Hiển thị tên thật của bạn công khai cho tất cả độc giả cùng thấy.";
+                }
+                if (track) track.className = "w-12 h-6 bg-gray-300 rounded-full transition-colors relative";
+                if (thumb) thumb.className = "w-5 h-5 bg-white rounded-full shadow-md absolute top-0.5 left-0.5 transition-transform duration-200";
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            updateSelectedCount();
+            updateAnonymousUI();
+        });
     </script>
 }
 

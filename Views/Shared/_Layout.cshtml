@@ -323,7 +323,11 @@
                         <span>Quản lý User</span>
                     </a>
                 }
-                <span class="text-xs text-gray-400 font-medium hidden md:inline">@DateTime.Now.ToString("dd/MM/yyyy HH:mm")</span>
+                <div class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/90 rounded-xl text-xs font-semibold text-slate-700 shadow-2xs select-none transition-colors" title="Thời gian hệ thống (Thời gian thực)">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span id="realtimeClock" class="font-mono tracking-tight font-bold text-slate-800">@DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss")</span>
+                </div>
                 @if (isSignedIn)
                 {
                     <!-- Notification Bell Component -->
@@ -578,6 +582,25 @@
                 }
             } catch (err) {}
         });
+
+        // Đồng hồ thời gian thực (Real-time Clock)
+        (function() {
+            function updateRealtimeClock() {
+                const clockEl = document.getElementById('realtimeClock');
+                if (!clockEl) return;
+                const now = new Date();
+                const d = String(now.getDate()).padStart(2, '0');
+                const m = String(now.getMonth() + 1).padStart(2, '0');
+                const y = now.getFullYear();
+                const hh = String(now.getHours()).padStart(2, '0');
+                const mm = String(now.getMinutes()).padStart(2, '0');
+                const ss = String(now.getSeconds()).padStart(2, '0');
+                clockEl.textContent = `${d}/${m}/${y} ${hh}:${mm}:${ss}`;
+            }
+
+            setInterval(updateRealtimeClock, 1000);
+            updateRealtimeClock();
+        })();
     </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

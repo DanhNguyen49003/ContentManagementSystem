@@ -27,6 +27,13 @@ namespace ContentManagementSystem.Seeders
             var roleManager = services.GetRequiredService<RoleManager<ContentRole>>();
             var userManager = services.GetRequiredService<UserManager<ContentUser>>();
 
+            // Kiểm tra nhanh: Nếu tài khoản quản trị viên đã tồn tại thì bỏ qua seeder để khởi động trong tích tắc
+            var existingAdmin = await userManager.FindByEmailAsync("admin@cms.com");
+            if (existingAdmin != null)
+            {
+                return;
+            }
+
             // 1. Seed Roles
             foreach (var roleName in Roles)
             {

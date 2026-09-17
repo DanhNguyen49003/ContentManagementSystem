@@ -328,71 +328,59 @@ namespace ContentManagementSystem.Services
             _logger = logger;
         }
 
-        public async Task SendEmailAsync(string email, string subject, string htmlMessage)
+        public Task SendEmailAsync(string email, string subject, string htmlMessage)
         {
-            _logger.LogInformation("Đang gửi email tới: {Email} | Tiêu đề: {Subject}", email, subject);
+            _logger.LogInformation("Lập lịch gửi email ngầm tới: {Email} | Tiêu đề: {Subject}", email, subject);
 
             // Nếu mật khẩu/key chưa được cấu hình thì ghi log lại nội dung
             if (string.IsNullOrWhiteSpace(_settings.Password))
             {
-                _logger.LogWarning("EmailSettings (Password/Key) chưa được cấu hình. Nội dung email được ghi log cho {Email}.", email);
-                return;
+                _logger.LogWarning("EmailSettings (Password/Key) chưa được cấu hình. Bỏ qua gửi email cho {Email}.", email);
+                return Task.CompletedTask;
             }
 
-            try
+            // Gửi email trên luồng nền (Background Task) để KHÔNG BAO GIỜ làm nghẽn lượt request HTTP của người dùng
+            _ = Task.Run(async () =>
             {
-                var message = new MimeMessage();
-                message.From.Add(new MailboxAddress(_settings.SenderName, _settings.SenderEmail));
-                message.To.Add(new MailboxAddress(email, email));
-                message.Subject = subject;
-
-                var bodyBuilder = new BodyBuilder
+                try
                 {
-                    HtmlBody = htmlMessage
-                };
-                message.Body = bodyBuilder.ToMessageBody();
+                    var message = new MimeMessage();
+                    message.From.Add(new MailboxAddress(_settings.SenderName, _settings.SenderEmail));
+                    message.To.Add(new MailboxAddress(email, email));
+                    message.Subject = subject;
 
-                using var client = new SmtpClient();
-                client.Timeout = 10000; // 10 giây timeout tránh treo luồng web
-                client.ServerCertificateValidationCallback = (s, c, h, e) => true;
+                    var bodyBuilder = new BodyBuilder
+                    {
+                        HtmlBody = htmlMessage
+                    };
+                    message.Body = bodyBuilder.ToMessageBody();
 
-                // Brevo port 587 uses STARTTLS, port 465 uses SSL
-                var secureSocketOption = _settings.SmtpPort == 465 
-                    ? SecureSocketOptions.SslOnConnect 
-                    : (_settings.EnableSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.Auto);
+                    using var client = new SmtpClient();
+                    client.Timeout = 8000;
+                    client.ServerCertificateValidationCallback = (s, c, h, e) => true;
 
-                await client.ConnectAsync(_settings.SmtpServer, _settings.SmtpPort, secureSocketOption);
+                    var secureSocketOption = _settings.SmtpPort == 465 
+                        ? SecureSocketOptions.SslOnConnect 
+                        : (_settings.EnableSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.Auto);
 
-                if (!string.IsNullOrWhiteSpace(_settings.Username) && !string.IsNullOrWhiteSpace(_settings.Password))
-                {
-                    await client.AuthenticateAsync(_settings.Username, _settings.Password);
+                    await client.ConnectAsync(_settings.SmtpServer, _settings.SmtpPort, secureSocketOption);
+
+                    if (!string.IsNullOrWhiteSpace(_settings.Username) && !string.IsNullOrWhiteSpace(_settings.Password))
+                    {
+                        await client.AuthenticateAsync(_settings.Username, _settings.Password);
+                    }
+
+                    await client.SendAsync(message);
+                    await client.DisconnectAsync(true);
+                    _logger.LogInformation("Gửi email thành công tới {Email} qua {Server}:{Port}", email, _settings.SmtpServer, _settings.SmtpPort);
                 }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Lỗi khi gửi email ngầm tới: {Email}", email);
+                }
+            });
 
-                await client.SendAsync(message);
-                await client.DisconnectAsync(true);
-                _logger.LogInformation("Gửi email thành công tới {Email} qua {Server}:{Port}", email, _settings.SmtpServer, _settings.SmtpPort);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, @"
-=======================================================================
-❌ [EmailSender] LỖI GỬI EMAIL TỚI: {Email}
-Mã lỗi: {Message}
-Máy chủ SMTP: {Server}:{Port} | Tài khoản: {Username}
------------------------------------------------------------------------
-💡 NGUYÊN NHÂN & CÁCH KHẮC PHỤC:
-1. Nếu dùng Brevo (smtp-relay.brevo.com:587):
-   - Mã '535 Authentication failed' nghĩa là Login hoặc SMTP Key không khớp.
-   - Hãy vào: https://app.brevo.com/settings/keys/smtp
-   - Kiểm tra đúng giá trị tại ô 'Login' (thường là mã xxx@smtp-brevo.com hoặc email đăng ký).
-   - Nhấn 'Generate a new SMTP key' và copy key 'xsmtpsib-...' dán vào Password trong appsettings.json.
-2. Nếu dùng Gmail (Khuyên dùng - cực kỳ ổn định):
-   - SmtpServer: smtp.gmail.com | SmtpPort: 587 | EnableSsl: true
-   - Username: dia_chi_gmail_cua_ban@gmail.com
-   - Password: Mật khẩu ứng dụng 16 ký tự (tạo tại myaccount.google.com/apppasswords)
-=======================================================================",
-                    email, ex.Message, _settings.SmtpServer, _settings.SmtpPort, _settings.Username);
-            }
+            return Task.CompletedTask;
         }
     }
 }

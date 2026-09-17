@@ -44,8 +44,9 @@ namespace ContentManagementSystem.Controllers
                 {
                     // 1. Basic Stats & QA Metrics
                     var allPostsList = await _contentContext.Posts
+                        .AsNoTracking()
                         .Where(p => !p.IsDeleted)
-                        .Select(p => new { p.Id, p.IsPublished, p.Status, p.DepartmentId })
+                        .Select(p => new { p.Id, p.IsPublished, p.Status, p.DepartmentId, p.CreatedAt })
                         .ToListAsync();
 
                     model.TotalPosts = allPostsList.Count;
@@ -66,6 +67,7 @@ namespace ContentManagementSystem.Controllers
 
                     // Active Submission Window
                     var activeWin = await _contentContext.SubmissionWindows
+                        .AsNoTracking()
                         .Where(w => w.IsActive && !w.IsDeleted)
                         .OrderByDescending(w => w.StartDate)
                         .FirstOrDefaultAsync();
@@ -83,6 +85,7 @@ namespace ContentManagementSystem.Controllers
 
                     // Department progress for QA Coordinator monitoring
                     var allDepts = await _contentContext.Departments
+                        .AsNoTracking()
                         .Where(d => !d.IsDeleted)
                         .Select(d => new { d.Id, d.Name })
                         .ToListAsync();
@@ -103,10 +106,10 @@ namespace ContentManagementSystem.Controllers
 
                     // 2. Category Distribution (Top categories)
                     var topCategories = await _contentContext.Categories
-                        .Include(c => c.Posts)
-                        .OrderByDescending(c => c.Posts.Count)
+                        .AsNoTracking()
+                        .Select(c => new { c.Name, Count = c.Posts.Count(p => !p.IsDeleted) })
+                        .OrderByDescending(c => c.Count)
                         .Take(5)
-                        .Select(c => new { c.Name, Count = c.Posts.Count })
                         .ToListAsync();
 
                     if (topCategories.Any() && topCategories.Any(c => c.Count > 0))
@@ -121,8 +124,8 @@ namespace ContentManagementSystem.Controllers
                     }
 
                     // 3. User Roles Distribution
-                    var roles = await _identityContext.Roles.ToListAsync();
-                    var userRoles = await _identityContext.UserRoles.ToListAsync();
+                    var roles = await _identityContext.Roles.AsNoTracking().ToListAsync();
+                    var userRoles = await _identityContext.UserRoles.AsNoTracking().ToListAsync();
 
                     var adminRoleId = roles.FirstOrDefault(r => r.Name == "Admin")?.Id;
                     var qaManagerRoleId = roles.FirstOrDefault(r => r.Name == "QA Manager")?.Id;
@@ -139,17 +142,24 @@ namespace ContentManagementSystem.Controllers
                     if (model.QACoordinatorCount == 0) model.QACoordinatorCount = 1;
                     if (model.CustomerCount == 0) model.CustomerCount = 2;
 
-                    // 4. Monthly Trends (Last 6 months)
-                    var now = DateTime.Now;
+                    // 4. Monthly Trends (Last 6 months - In-Memory Fast Aggregation)
+                    var now = DateTime.UtcNow;
+                    var sixMonthsAgo = DateTime.SpecifyKind(new DateTime(now.Year, now.Month, 1).AddMonths(-5), DateTimeKind.Utc);
+                    var recentCommentDates = await _contentContext.Comments
+                        .AsNoTracking()
+                        .Where(c => c.CreatedAt >= sixMonthsAgo)
+                        .Select(c => new { c.CreatedAt.Month, c.CreatedAt.Year })
+                        .ToListAsync();
+
                     for (int i = 5; i >= 0; i--)
                     {
                         var m = now.AddMonths(-i);
                         model.Months.Add($"T{m.Month}");
 
-                        var postCount = await _contentContext.Posts
-                            .CountAsync(p => p.CreatedAt.Month == m.Month && p.CreatedAt.Year == m.Year && !p.IsDeleted);
-                        var commentCount = await _contentContext.Comments
-                            .CountAsync(c => c.CreatedAt.Month == m.Month && c.CreatedAt.Year == m.Year);
+                        var postCount = allPostsList
+                            .Count(p => p.CreatedAt.Month == m.Month && p.CreatedAt.Year == m.Year);
+                        var commentCount = recentCommentDates
+                            .Count(c => c.Month == m.Month && c.Year == m.Year);
 
                         if (postCount == 0) postCount = Math.Max(6, 8 + (5 - i) * 3 + (m.Month % 4));
                         if (commentCount == 0) commentCount = Math.Max(12, 14 + (5 - i) * 4 + (m.Month % 5));
@@ -159,7 +169,7 @@ namespace ContentManagementSystem.Controllers
                     }
 
                     // 5. Testimonial Rating Distribution (Nhận xét & Đánh giá)
-                    var testimonials = await _contentContext.Testimonials.ToListAsync();
+                    var testimonials = await _contentContext.Testimonials.AsNoTracking().ToListAsync();
                     model.TotalTestimonials = testimonials.Count;
                     if (testimonials.Any())
                     {
@@ -252,8 +262,8 @@ namespace ContentManagementSystem.Controllers
                         };
                     }
 
-                    // Cache in RAM for 1 minute (Fast & Always fresh)
-                    _cache.Set(cacheKey, model, TimeSpan.FromMinutes(1));
+                    // Cache in RAM for 5 minutes (Fast & Always fresh)
+                    _cache.Set(cacheKey, model, TimeSpan.FromMinutes(5));
                 }
                 catch (Exception ex)
                 {

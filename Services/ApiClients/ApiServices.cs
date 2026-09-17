@@ -15,6 +15,9 @@ namespace ContentManagementSystem.Services.ApiClients
         public async Task<List<PostDto>> GetAllAsync()
             => await _api.GetAsync<List<PostDto>>("api/posts") ?? new List<PostDto>();
 
+        public async Task<List<PostDto>> GetByAuthorIdAsync(string authorId)
+            => await _api.GetAsync<List<PostDto>>($"api/posts?authorId={authorId}") ?? new List<PostDto>();
+
         public async Task<PostDto?> GetByIdAsync(Guid id)
             => await _api.GetAsync<PostDto>($"api/posts/{id}");
 
