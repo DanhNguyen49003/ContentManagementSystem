@@ -51,6 +51,12 @@ namespace ContentManagementSystem.Controllers.Api
                 return BadRequest(ApiResponse<string>.Fail("Dữ liệu không hợp lệ."));
             }
 
+            // Bắt buộc duyệt: Chỉ Admin mới có thể tự động xuất bản
+            if (!User.IsInRole("Admin"))
+            {
+                dto.IsPublished = false;
+            }
+
             var success = await _postService.CreateAsync(dto);
             if (!success)
             {
@@ -75,10 +81,22 @@ namespace ContentManagementSystem.Controllers.Api
                 return BadRequest(ApiResponse<string>.Fail("Dữ liệu không hợp lệ."));
             }
 
+            var original = await _postService.GetByIdAsync(id);
+            if (original == null)
+            {
+                return NotFound(ApiResponse<string>.Fail("Không tìm thấy bài viết để cập nhật."));
+            }
+
+            // Nếu không phải Admin hoặc QA Coordinator, giữ nguyên trạng thái IsPublished gốc
+            if (!User.IsInRole("Admin") && !User.IsInRole("QA Coordinator"))
+            {
+                dto.IsPublished = original.IsPublished;
+            }
+
             var success = await _postService.UpdateAsync(dto);
             if (!success)
             {
-                return NotFound(ApiResponse<string>.Fail("Không tìm thấy bài viết để cập nhật."));
+                return BadRequest(ApiResponse<string>.Fail("Không thể cập nhật bài viết."));
             }
 
             return Ok(ApiResponse<PostDto>.Ok(dto, "Cập nhật bài viết thành công."));

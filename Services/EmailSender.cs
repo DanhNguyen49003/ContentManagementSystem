@@ -200,6 +200,121 @@ namespace ContentManagementSystem.Services
 </body>
 </html>";
         }
+
+        public static string GenerateOtpVerificationEmail(string otpCode, string recipientName = "", int expirationMinutes = 5)
+        {
+            return $@"
+<!DOCTYPE html>
+<html lang=""vi"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Mã xác thực OTP - CMS Portal</title>
+    <style>
+        body {{ margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155; }}
+        .wrapper {{ width: 100%; table-layout: fixed; background-color: #f8fafc; padding: 40px 0; }}
+        .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0; }}
+        .header {{ background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); padding: 36px 32px; text-align: center; }}
+        .header h1 {{ margin: 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }}
+        .header p {{ margin: 6px 0 0 0; color: #e0e7ff; font-size: 13px; }}
+        .content {{ padding: 36px 32px; }}
+        .greeting {{ font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 16px; }}
+        .message {{ font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 24px; }}
+        .otp-box-wrapper {{ text-align: center; margin: 28px 0; }}
+        .otp-box {{ display: inline-block; padding: 16px 36px; background-color: #f8fafc; border: 2px dashed #6366f1; border-radius: 14px; font-size: 36px; font-weight: 800; color: #4f46e5; letter-spacing: 12px; font-family: 'Courier New', Courier, monospace; }}
+        .expiry-badge {{ display: inline-block; margin-top: 14px; padding: 6px 16px; background-color: #fef2f2; color: #dc2626; border-radius: 9999px; font-size: 12px; font-weight: 600; border: 1px solid #fecaca; }}
+        .notice {{ font-size: 12px; color: #94a3b8; line-height: 1.5; border-top: 1px solid #f1f5f9; padding-top: 20px; margin-top: 24px; }}
+        .footer {{ background-color: #f8fafc; padding: 24px 32px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }}
+    </style>
+</head>
+<body>
+    <div class=""wrapper"">
+        <div class=""container"">
+            <div class=""header"">
+                <h1>CMS Portal</h1>
+                <p>Xác thực tài khoản người dùng</p>
+            </div>
+            <div class=""content"">
+                <div class=""greeting"">Xin chào {(string.IsNullOrEmpty(recipientName) ? "bạn" : recipientName)}, 👋</div>
+                <div class=""message"">
+                    Cảm ơn bạn đã đăng ký tài khoản tại <strong>CMS Portal</strong>. Để kích hoạt tài khoản của bạn, vui lòng nhập mã xác thực OTP 6 chữ số dưới đây vào trang đăng ký:
+                </div>
+                <div class=""otp-box-wrapper"">
+                    <div class=""otp-box"">{otpCode}</div>
+                    <br />
+                    <span class=""expiry-badge"">⏱ Hiệu lực trong {expirationMinutes} phút</span>
+                </div>
+                <div class=""message"" style=""font-size: 13px; color: #64748b; text-align: center;"">
+                    Vui lòng không cung cấp mã OTP này cho bất kỳ ai để đảm bảo an toàn cho tài khoản của bạn.
+                </div>
+                <div class=""notice"">
+                    * Lưu ý: Nếu bạn không thực hiện yêu cầu đăng ký tại CMS Portal, bạn có thể hoàn toàn yên tâm bỏ qua email này.
+                </div>
+            </div>
+            <div class=""footer"">
+                &copy; {DateTime.Now.Year} CMS Portal. Mọi quyền được bảo lưu.
+            </div>
+        </div>
+    </div>
+</body>
+</html>";
+        }
+
+        public static string GeneratePostApprovedEmail(string postTitle, string authorName = "", string postUrl = "")
+        {
+            return $@"
+<!DOCTYPE html>
+<html lang=""vi"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Bài viết đã được duyệt - CMS Portal</title>
+    <style>
+        body {{ margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155; }}
+        .wrapper {{ width: 100%; table-layout: fixed; background-color: #f8fafc; padding: 40px 0; }}
+        .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0; }}
+        .header {{ background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 36px 32px; text-align: center; }}
+        .header h1 {{ margin: 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }}
+        .header p {{ margin: 6px 0 0 0; color: #d1fae5; font-size: 13px; }}
+        .content {{ padding: 36px 32px; }}
+        .greeting {{ font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 16px; }}
+        .message {{ font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 24px; }}
+        .post-card {{ background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 18px 20px; border-radius: 8px; margin-bottom: 24px; }}
+        .post-card h3 {{ margin: 0 0 6px 0; color: #065f46; font-size: 16px; font-weight: 700; }}
+        .post-card p {{ margin: 0; font-size: 13px; color: #047857; }}
+        .btn-wrapper {{ text-align: center; margin: 28px 0; }}
+        .btn {{ display: inline-block; padding: 14px 32px; background-color: #059669; color: #ffffff !important; text-decoration: none; border-radius: 10px; font-size: 14px; font-weight: 700; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3); }}
+        .footer {{ background-color: #f8fafc; padding: 24px 32px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }}
+    </style>
+</head>
+<body>
+    <div class=""wrapper"">
+        <div class=""container"">
+            <div class=""header"">
+                <h1>CMS Portal</h1>
+                <p>Thông Báo Phê Duyệt Bài Viết</p>
+            </div>
+            <div class=""content"">
+                <div class=""greeting"">Xin chúc mừng {(string.IsNullOrEmpty(authorName) ? "bạn" : authorName)}! 🎉</div>
+                <div class=""message"">
+                    Bài viết của bạn đã được <strong>Admin / QA Coordinator</strong> kiểm duyệt thành công và đã được xuất bản công khai trên hệ thống <strong>CMS Portal</strong>:
+                </div>
+                <div class=""post-card"">
+                    <h3>{postTitle}</h3>
+                    <p>Trạng thái: <strong>Đã xuất bản (Công khai)</strong></p>
+                </div>
+                <div class=""btn-wrapper"">
+                    <a href=""{postUrl}"" class=""btn"" target=""_blank"">Xem bài viết ngay &rarr;</a>
+                </div>
+            </div>
+            <div class=""footer"">
+                &copy; {DateTime.Now.Year} CMS Portal. Chúc bạn có những trải nghiệm sáng tạo nội dung tuyệt vời!
+            </div>
+        </div>
+    </div>
+</body>
+</html>";
+        }
     }
 
     public class EmailSender : IEmailSender

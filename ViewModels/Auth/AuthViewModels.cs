@@ -159,5 +159,21 @@ namespace ContentManagementSystem.ViewModels.Auth
         public int UserCount { get; set; }
         public string Description { get; set; } = string.Empty;
     }
+
+    public class VerifyOtpViewModel
+    {
+        [Required(ErrorMessage = "Email không được để trống.")]
+        [EmailAddress(ErrorMessage = "Định dạng Email không hợp lệ.")]
+        [Display(Name = "Email")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Vui lòng nhập mã OTP gồm 6 chữ số.")]
+        [StringLength(6, MinimumLength = 6, ErrorMessage = "Mã OTP phải có đúng 6 chữ số.")]
+        [RegularExpression(@"^[0-9]{6}$", ErrorMessage = "Mã OTP chỉ bao gồm 6 chữ số.")]
+        [Display(Name = "Mã OTP")]
+        public string OtpCode { get; set; } = string.Empty;
+
+        public string? ReturnUrl { get; set; }
+    }
 }
 

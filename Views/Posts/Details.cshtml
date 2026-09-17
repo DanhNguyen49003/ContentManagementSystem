@@ -42,6 +42,37 @@
         </div>
     </div>
 
+    @if (!Model.IsPublished)
+    {
+        <div class="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+            <div class="flex items-start gap-3">
+                <div class="p-2 bg-amber-100 text-amber-700 rounded-xl flex-shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <h4 class="font-bold text-amber-900 text-sm">Bài viết đang ở trạng thái CHỜ DUYỆT</h4>
+                    <p class="text-xs text-amber-700 mt-0.5 leading-relaxed">
+                        Nội dung này chưa được xuất bản công khai trên trang chủ. Chỉ tác giả và ban kiểm duyệt mới có quyền xem trước.
+                    </p>
+                </div>
+            </div>
+            @if (ViewBag.CanApprove == true)
+            {
+                <form asp-action="TogglePublish" asp-route-id="@Model.Id" method="post" class="flex-shrink-0">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-500/20 transition-all active:scale-95">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Duyệt & Đăng bài ngay</span>
+                    </button>
+                </form>
+            }
+        </div>
+    }
+
     <!-- ============================================================== -->
     <!-- MAIN ARTICLE CARD (ELEVATED, CLEAN, PROFESSIONAL READING VIEW) -->
     <!-- ============================================================== -->
@@ -60,14 +91,14 @@
             }
             @if (Model.IsPublished)
             {
-                <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-semibold border border-emerald-100">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Đã xuất bản
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold border border-emerald-200">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Đã duyệt & Đăng
                 </span>
             }
             else
             {
-                <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-700 rounded-full text-xs font-semibold border border-amber-100">
-                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Bản nháp
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-800 rounded-full text-xs font-bold border border-amber-200">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> Chờ duyệt (Chưa đăng)
                 </span>
             }
             <span class="text-gray-400 text-xs flex items-center gap-1 ml-auto">

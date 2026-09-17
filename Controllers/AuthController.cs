@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ContentManagementSystem.ApplicationCore.DTOs;
@@ -32,6 +33,7 @@ namespace ContentManagementSystem.Controllers
         private readonly EmailSettings _emailSettings;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly ILogger<AuthController> _logger;
+        private readonly IMemoryCache _memoryCache;
 
         public AuthController(
             UserManager<ContentUser> userManager,
@@ -42,7 +44,8 @@ namespace ContentManagementSystem.Controllers
             IEmailSender emailSender,
             IOptions<EmailSettings> emailOptions,
             IWebHostEnvironment webHostEnvironment,
-            ILogger<AuthController> logger)
+            ILogger<AuthController> logger,
+            IMemoryCache memoryCache)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -53,6 +56,7 @@ namespace ContentManagementSystem.Controllers
             _emailSettings = emailOptions.Value;
             _webHostEnvironment = webHostEnvironment;
             _logger = logger;
+            _memoryCache = memoryCache;
         }
 
         // ==========================================
@@ -177,10 +181,38 @@ namespace ContentManagementSystem.Controllers
                 return View(model);
             }
 
-            // 4. Đảm bảo tài khoản luôn ở trạng thái đã kích hoạt và không bị khóa
-            if (!user.EmailConfirmed || user.LockoutEnd != null || user.AccessFailedCount > 0)
+            // 4. Kiểm tra trạng thái xác thực Email qua mã OTP
+            if (!user.EmailConfirmed)
             {
-                user.EmailConfirmed = true;
+                var emailKey = user.Email!.ToLowerInvariant();
+                var cooldownKey = $"Register_OTP_Cooldown_{emailKey}";
+                if (!_memoryCache.TryGetValue(cooldownKey, out _))
+                {
+                    var otp = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+                    var cacheKey = $"Register_OTP_{emailKey}";
+                    var attemptsKey = $"Register_OTP_Attempts_{emailKey}";
+
+                    _memoryCache.Set(cacheKey, otp, TimeSpan.FromMinutes(5));
+                    _memoryCache.Set(cooldownKey, DateTime.UtcNow.AddSeconds(60), TimeSpan.FromSeconds(60));
+                    _memoryCache.Set(attemptsKey, 0, TimeSpan.FromMinutes(5));
+
+                    try
+                    {
+                        var emailHtml = EmailTemplateHelper.GenerateOtpVerificationEmail(otp, user.FullName ?? user.Email, 5);
+                        _ = _emailSender.SendEmailAsync(user.Email!, "Mã xác thực OTP tài khoản - CMS Portal", emailHtml);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Lỗi khi gửi email OTP cho {Email}.", user.Email);
+                    }
+                }
+
+                TempData["InfoMessage"] = "Tài khoản của bạn chưa được kích hoạt email. Hệ thống đã gửi mã OTP xác nhận vào hòm thư của bạn.";
+                return RedirectToAction(nameof(VerifyOtp), new { email = user.Email, returnUrl });
+            }
+
+            if (user.LockoutEnd != null || user.AccessFailedCount > 0)
+            {
                 user.LockoutEnd = null;
                 user.AccessFailedCount = 0;
                 await _userManager.UpdateAsync(user);
@@ -262,7 +294,7 @@ namespace ContentManagementSystem.Controllers
                 Email = model.Email,
                 FullName = model.FullName,
                 CreatedAt = DateTime.UtcNow,
-                EmailConfirmed = true // Tự động kích hoạt ngay để tài khoản có thể đăng nhập ngay lập tức!
+                EmailConfirmed = false // Bắt buộc xác thực qua mã OTP trước khi kích hoạt!
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
@@ -273,30 +305,30 @@ namespace ContentManagementSystem.Controllers
                 // Mặc định gán vai trò Customer cho tài khoản đăng ký mới
                 await _userManager.AddToRoleAsync(user, "Customer");
 
-                // Thử gửi email thông báo chào mừng phụ trợ (nếu có cấu hình SMTP)
+                // Tạo mã OTP 6 chữ số và lưu vào cache 5 phút
+                var otp = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+                var emailKey = user.Email.ToLowerInvariant();
+                var cacheKey = $"Register_OTP_{emailKey}";
+                var cooldownKey = $"Register_OTP_Cooldown_{emailKey}";
+                var attemptsKey = $"Register_OTP_Attempts_{emailKey}";
+
+                _memoryCache.Set(cacheKey, otp, TimeSpan.FromMinutes(5));
+                _memoryCache.Set(cooldownKey, DateTime.UtcNow.AddSeconds(60), TimeSpan.FromSeconds(60));
+                _memoryCache.Set(attemptsKey, 0, TimeSpan.FromMinutes(5));
+
+                // Gửi email chứa mã xác thực OTP
                 try
                 {
-                    var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                    var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
-                    var callbackUrl = Url.Action(
-                        "ConfirmEmail",
-                        "Auth",
-                        new { userId = user.Id, code = encodedToken },
-                        protocol: Request.Scheme);
-
-                    if (!string.IsNullOrEmpty(callbackUrl))
-                    {
-                        var emailHtml = EmailTemplateHelper.GenerateConfirmationEmail(callbackUrl, user.FullName ?? user.Email);
-                        await _emailSender.SendEmailAsync(user.Email!, "Chào mừng thành viên mới - CMS Portal", emailHtml);
-                    }
+                    var emailHtml = EmailTemplateHelper.GenerateOtpVerificationEmail(otp, user.FullName ?? user.Email, 5);
+                    await _emailSender.SendEmailAsync(user.Email!, "Mã xác thực OTP đăng ký tài khoản - CMS Portal", emailHtml);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Lỗi khi gửi email thông báo cho {Email}, người dùng vẫn có thể đăng nhập bình thường.", user.Email);
+                    _logger.LogWarning(ex, "Lỗi khi gửi email OTP cho {Email}.", user.Email);
                 }
 
-                TempData["SuccessMessage"] = "Đăng ký tài khoản thành công! Bạn có thể đăng nhập ngay bằng email và mật khẩu vừa tạo.";
-                return RedirectToAction(nameof(Login));
+                TempData["SuccessMessage"] = "Mã xác thực OTP gồm 6 chữ số đã được gửi tới email của bạn. Vui lòng kiểm tra hộp thư để kích hoạt tài khoản!";
+                return RedirectToAction(nameof(VerifyOtp), new { email = user.Email });
             }
 
             foreach (var error in result.Errors)
@@ -343,6 +375,190 @@ namespace ContentManagementSystem.Controllers
             }
 
             return RedirectToAction(nameof(Login));
+        }
+
+        // GET: /Auth/VerifyOtp
+        [HttpGet]
+        public async Task<IActionResult> VerifyOtp(string? email, string? returnUrl = null)
+        {
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                return LocalRedirect(returnUrl ?? "~/");
+            }
+
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return RedirectToAction(nameof(Register));
+            }
+
+            email = email.Trim();
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+            {
+                TempData["ErrorMessage"] = "Không tìm thấy thông tin tài khoản ứng với email này.";
+                return RedirectToAction(nameof(Register));
+            }
+
+            if (user.EmailConfirmed)
+            {
+                TempData["SuccessMessage"] = "Tài khoản của bạn đã được xác thực trước đó. Vui lòng đăng nhập!";
+                return RedirectToAction(nameof(Login));
+            }
+
+            ViewData["ReturnUrl"] = returnUrl;
+            return View(new VerifyOtpViewModel
+            {
+                Email = email,
+                ReturnUrl = returnUrl
+            });
+        }
+
+        // POST: /Auth/VerifyOtp
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> VerifyOtp(VerifyOtpViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            model.Email = model.Email?.Trim() ?? string.Empty;
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+            {
+                ModelState.AddModelError(string.Empty, "Không tìm thấy thông tin tài khoản với email này.");
+                return View(model);
+            }
+
+            if (user.EmailConfirmed)
+            {
+                TempData["SuccessMessage"] = "Tài khoản này đã được xác thực thành công. Hãy đăng nhập!";
+                return RedirectToAction(nameof(Login));
+            }
+
+            var emailKey = model.Email.ToLowerInvariant();
+            var cacheKey = $"Register_OTP_{emailKey}";
+            var attemptsKey = $"Register_OTP_Attempts_{emailKey}";
+            var lockoutKey = $"Register_OTP_Lockout_{emailKey}";
+
+            // Tiêu chuẩn 2: Kiểm tra khóa tạm thời do nhập sai quá 5 lần (Max Attempts)
+            if (_memoryCache.TryGetValue(lockoutKey, out DateTime lockoutEnd))
+            {
+                var remainingMinutes = Math.Max(1, (int)(lockoutEnd - DateTime.UtcNow).TotalMinutes);
+                ModelState.AddModelError(string.Empty, $"Bạn đã nhập sai mã OTP quá 5 lần. Chức năng xác thực bị khóa tạm thời. Vui lòng thử lại sau {remainingMinutes} phút.");
+                return View(model);
+            }
+
+            if (!_memoryCache.TryGetValue(cacheKey, out string? cachedOtp) || string.IsNullOrEmpty(cachedOtp))
+            {
+                ModelState.AddModelError(string.Empty, "Mã OTP đã hết hiệu lực (quá 5 phút) hoặc chưa được tạo. Vui lòng bấm 'Gửi lại mã OTP'.");
+                ModelState.AddModelError(nameof(model.OtpCode), "Mã OTP đã hết hiệu lực.");
+                return View(model);
+            }
+
+            _memoryCache.TryGetValue(attemptsKey, out int currentAttempts);
+
+            if (!string.Equals(cachedOtp, model.OtpCode?.Trim(), StringComparison.Ordinal))
+            {
+                currentAttempts++;
+                _memoryCache.Set(attemptsKey, currentAttempts, TimeSpan.FromMinutes(5));
+
+                const int maxAttempts = 5;
+                if (currentAttempts >= maxAttempts)
+                {
+                    // Hủy mã OTP ngay lập tức và khóa tạm 15 phút chống dò mã (Brute-force)
+                    _memoryCache.Remove(cacheKey);
+                    _memoryCache.Remove(attemptsKey);
+                    _memoryCache.Set(lockoutKey, DateTime.UtcNow.AddMinutes(15), TimeSpan.FromMinutes(15));
+
+                    ModelState.AddModelError(string.Empty, "Bạn đã nhập sai mã OTP 5 lần liên tiếp. Mã OTP hiện tại đã bị hủy và chức năng xác thực bị tạm khóa 15 phút.");
+                    return View(model);
+                }
+
+                int remaining = maxAttempts - currentAttempts;
+                ModelState.AddModelError(string.Empty, $"Mã OTP không chính xác. Bạn còn {remaining} lần thử trước khi mã bị vô hiệu hóa.");
+                ModelState.AddModelError(nameof(model.OtpCode), "Mã OTP không chính xác.");
+                return View(model);
+            }
+
+            // 1. Xác thực thành công
+            user.EmailConfirmed = true;
+            user.LockoutEnd = null;
+            user.AccessFailedCount = 0;
+            await _userManager.UpdateAsync(user);
+
+            // 2. Xóa mã OTP, attempts và cooldown khỏi cache để chống Replay Attack
+            _memoryCache.Remove(cacheKey);
+            _memoryCache.Remove(attemptsKey);
+            _memoryCache.Remove($"Register_OTP_Cooldown_{emailKey}");
+
+            // 3. Tự động đăng nhập người dùng
+            await _signInManager.SignInAsync(user, isPersistent: false);
+
+            _logger.LogInformation("Người dùng {Email} đã xác thực mã OTP thành công và đăng nhập.", user.Email);
+            TempData["SuccessMessage"] = "Xác thực OTP thành công! Chào mừng bạn gia nhập CMS Portal.";
+
+            if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
+            {
+                return Redirect(model.ReturnUrl);
+            }
+            return RedirectToAction("Index", "Home");
+        }
+
+        // POST: /Auth/ResendOtp
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResendOtp(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return Json(new { success = false, message = "Email không được để trống." });
+            }
+
+            email = email.Trim().ToLowerInvariant();
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy tài khoản tương ứng với email này." });
+            }
+
+            if (user.EmailConfirmed)
+            {
+                return Json(new { success = false, message = "Tài khoản đã được xác thực trước đó. Bạn có thể đăng nhập ngay." });
+            }
+
+            // Tiêu chuẩn 1: Rate Limiting (Cooldown 60 giây)
+            var cooldownKey = $"Register_OTP_Cooldown_{email}";
+            if (_memoryCache.TryGetValue(cooldownKey, out DateTime cooldownEnd))
+            {
+                var remaining = Math.Max(1, (int)(cooldownEnd - DateTime.UtcNow).TotalSeconds);
+                return Json(new { success = false, message = $"Yêu cầu gửi mã quá nhanh. Vui lòng đợi {remaining} giây trước khi yêu cầu gửi lại mã." });
+            }
+
+            // Sinh mã OTP mới 6 số và lưu cache 5 phút
+            var otp = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+            var cacheKey = $"Register_OTP_{email}";
+            var attemptsKey = $"Register_OTP_Attempts_{email}";
+
+            _memoryCache.Set(cacheKey, otp, TimeSpan.FromMinutes(5));
+            _memoryCache.Set(cooldownKey, DateTime.UtcNow.AddSeconds(60), TimeSpan.FromSeconds(60));
+            _memoryCache.Set(attemptsKey, 0, TimeSpan.FromMinutes(5));
+
+            try
+            {
+                var emailHtml = EmailTemplateHelper.GenerateOtpVerificationEmail(otp, user.FullName ?? user.Email, 5);
+                await _emailSender.SendEmailAsync(user.Email!, "Mã xác thực OTP mới - CMS Portal", emailHtml);
+                _logger.LogInformation("Đã gửi lại mã OTP mới cho {Email}", user.Email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Lỗi khi gửi lại email OTP cho {Email}", user.Email);
+                return Json(new { success = false, message = "Lỗi khi gửi email. Vui lòng kiểm tra lại dịch vụ SMTP." });
+            }
+
+            // Tiêu chuẩn 3: Không trả về mã OTP trong JSON response
+            return Json(new { success = true, message = "Mã OTP mới đã được gửi tới email của bạn! Mã có hiệu lực trong 5 phút." });
         }
 
         // POST: /Auth/Logout

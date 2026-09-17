@@ -141,16 +141,16 @@
                                 <td class="px-6 py-4">
                                     @if (post.IsPublished)
                                     {
-                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-green-600"></span>
-                                            Đã xuất bản
+                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-bold">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                                            Đã duyệt & Đăng
                                         </span>
                                     }
                                     else
                                     {
-                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-xs font-medium">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                                            Bản nháp
+                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-full text-xs font-bold">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                            Chờ duyệt (Chưa đăng)
                                         </span>
                                     }
                                 </td>
@@ -161,7 +161,7 @@
                                         {
                                             <form asp-action="TogglePublish" asp-route-id="@post.Id" method="post" class="inline">
                                                 @Html.AntiForgeryToken()
-                                                <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all" title="Duyệt và xuất bản ngay">
+                                                <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all active:scale-95" title="Duyệt bài viết và xuất bản ngay lên hệ thống">
                                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                                                     Duyệt & Đăng
                                                 </button>
@@ -171,9 +171,9 @@
                                         {
                                             <form asp-action="TogglePublish" asp-route-id="@post.Id" method="post" class="inline">
                                                 @Html.AntiForgeryToken()
-                                                <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-600 transition-all" title="Gỡ xuất bản / Chuyển về bản nháp">
+                                                <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-600 transition-all active:scale-95" title="Thu hồi bài viết về trạng thái Chờ duyệt">
                                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                                    Gỡ bài
+                                                    Thu hồi bài
                                                 </button>
                                             </form>
                                         }

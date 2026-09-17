@@ -101,10 +101,9 @@ namespace ContentManagementSystem.Areas.Identity.Pages.Account
         }
 
 
-        public async Task OnGetAsync(string returnUrl = null)
+        public IActionResult OnGet(string returnUrl = null)
         {
-            ReturnUrl = returnUrl;
-            ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+            return RedirectToAction("Register", "Auth", new { returnUrl });
         }
 
         public async Task<IActionResult> OnPostAsync(string returnUrl = null)

@@ -134,10 +134,41 @@
 
                 <!-- IsPublished Toggle -->
                 <div class="pt-2">
-                    <label class="relative flex items-center gap-3 cursor-pointer">
-                        <input asp-for="IsPublished" type="checkbox" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
-                        <span class="text-sm font-medium text-gray-700 select-none">Xuất bản bài viết</span>
-                    </label>
+                    @if (ViewBag.CanApprove == true)
+                    {
+                        <div class="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 flex items-center justify-between gap-3">
+                            <div>
+                                <label class="relative flex items-center gap-3 cursor-pointer">
+                                    <input asp-for="IsPublished" type="checkbox" class="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500" />
+                                    <span class="text-sm font-bold text-emerald-950 select-none">Xuất bản bài viết (Phê duyệt công khai)</span>
+                                </label>
+                                <p class="text-xs text-emerald-700 mt-0.5 ml-7">Bạn có thẩm quyền phê duyệt bài viết này với tư cách Admin hoặc QA Coordinator phụ trách phòng ban.</p>
+                            </div>
+                            <span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-lg uppercase tracking-wider">Người duyệt</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <input type="hidden" asp-for="IsPublished" />
+                        <div class="p-4 rounded-xl bg-gray-50 border border-gray-200 text-gray-700 text-xs flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-2">
+                                <span class="text-gray-500 font-medium">Trạng thái bài viết:</span>
+                                @if (Model?.IsPublished == true)
+                                {
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Đã duyệt & Xuất bản
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-800 rounded-lg text-xs font-bold">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-amber-600"></span> Chờ duyệt (Chưa đăng)
+                                    </span>
+                                }
+                            </div>
+                            <span class="text-gray-400 italic">Chỉ Admin hoặc QA Coordinator phòng ban mới có quyền duyệt bài</span>
+                        </div>
+                    }
                 </div>
             </div>
 

@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using ContentManagementSystem.ApplicationCore.DTOs;
 using ContentManagementSystem.ApplicationCore.Entities.Identity;
@@ -20,6 +21,8 @@ namespace ContentManagementSystem.Controllers
     [Authorize(Roles = "Admin,QA Manager,QA Coordinator,Customer")]
     public class PostsController : Controller
     {
+        private const string HomePageDashboardCacheKey = "CMS_HOMEPAGE_DASHBOARD_DATA";
+
         private readonly IPostService _postService;
         private readonly ICategoryService _categoryService;
         private readonly IDepartmentService _departmentService;
@@ -28,6 +31,7 @@ namespace ContentManagementSystem.Controllers
         private readonly UserManager<ContentUser> _userManager;
         private readonly IEmailSender _emailSender;
         private readonly ILogger<PostsController> _logger;
+        private readonly IMemoryCache _cache;
 
         public PostsController(
             IPostService postService,
@@ -37,7 +41,8 @@ namespace ContentManagementSystem.Controllers
             IApiClient apiClient,
             UserManager<ContentUser> userManager,
             IEmailSender emailSender,
-            ILogger<PostsController> logger)
+            ILogger<PostsController> logger,
+            IMemoryCache cache)
         {
             _postService = postService;
             _categoryService = categoryService;
@@ -47,6 +52,19 @@ namespace ContentManagementSystem.Controllers
             _userManager = userManager;
             _emailSender = emailSender;
             _logger = logger;
+            _cache = cache;
+        }
+
+        private void InvalidateDashboardCache()
+        {
+            try
+            {
+                _cache.Remove(HomePageDashboardCacheKey);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not invalidate homepage dashboard cache.");
+            }
         }
 
         private async Task PopulateDropdownsAsync(string? selectedAuthorId = null, Guid? selectedCategoryId = null, Guid? selectedDepartmentId = null)
@@ -85,13 +103,20 @@ namespace ContentManagementSystem.Controllers
             var posts = await _postService.GetAllAsync();
             var departments = await _departmentService.GetAllAsync();
 
+            var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var currentUser = !string.IsNullOrEmpty(currentUserId) ? await _userManager.FindByIdAsync(currentUserId) : null;
+
+            // Người dùng có vai trò Customer chỉ thấy bài viết ĐÃ XUẤT BẢN hoặc bài viết do CHÍNH MÌNH tạo (Chờ duyệt)
+            if (User.IsInRole("Customer") && !User.IsInRole("Admin") && !User.IsInRole("QA Coordinator") && !User.IsInRole("QA Manager"))
+            {
+                posts = posts.Where(p => p.IsPublished || (!string.IsNullOrEmpty(currentUserId) && string.Equals(p.AuthorId, currentUserId, StringComparison.OrdinalIgnoreCase))).ToList();
+            }
+
             if (departmentId.HasValue)
             {
                 posts = posts.Where(p => p.DepartmentId == departmentId.Value).ToList();
             }
 
-            var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            var currentUser = !string.IsNullOrEmpty(currentUserId) ? await _userManager.FindByIdAsync(currentUserId) : null;
             ViewBag.UserDepartmentId = currentUser?.DepartmentId;
             ViewBag.Departments = departments;
             ViewBag.SelectedDepartmentId = departmentId;
@@ -121,8 +146,38 @@ namespace ContentManagementSystem.Controllers
                 }
             }
 
+            bool willPublish = !post.IsPublished;
             await _postService.TogglePublishAsync(id);
-            TempData["SuccessMessage"] = "Cập nhật trạng thái duyệt bài viết thành công!";
+            InvalidateDashboardCache();
+
+            if (willPublish)
+            {
+                TempData["SuccessMessage"] = $"Đã duyệt và xuất bản bài viết '{post.Title}' thành công!";
+
+                // Gửi email thông báo tự động cho tác giả bài viết
+                try
+                {
+                    if (!string.IsNullOrEmpty(post.AuthorId))
+                    {
+                        var author = await _userManager.FindByIdAsync(post.AuthorId);
+                        if (author != null && !string.IsNullOrEmpty(author.Email))
+                        {
+                            var postUrl = Url.Action("Details", "Posts", new { id = post.Id }, Request.Scheme) ?? "";
+                            var emailHtml = EmailTemplateHelper.GeneratePostApprovedEmail(post.Title, author.FullName ?? author.UserName ?? "", postUrl);
+                            await _emailSender.SendEmailAsync(author.Email, $"[CMS Portal] Bài viết '{post.Title}' của bạn đã được duyệt và đăng tải!", emailHtml);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Lỗi khi gửi email chúc mừng duyệt bài cho tác giả {AuthorId}", post.AuthorId);
+                }
+            }
+            else
+            {
+                TempData["SuccessMessage"] = $"Đã thu hồi bài viết '{post.Title}' về trạng thái Bản nháp (Chờ duyệt).";
+            }
+
             return RedirectToAction(nameof(Index));
         }
 
@@ -134,6 +189,21 @@ namespace ContentManagementSystem.Controllers
             var post = await _postService.GetByIdAsync(id.Value);
             if (post == null) return NotFound();
 
+            var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var currentUser = !string.IsNullOrEmpty(currentUserId) ? await _userManager.FindByIdAsync(currentUserId) : null;
+            bool isAdmin = User.IsInRole("Admin");
+            bool isCoordinator = User.IsInRole("QA Coordinator");
+            bool isAuthor = !string.IsNullOrEmpty(currentUserId) && post.AuthorId == currentUserId;
+            bool canApprove = isAdmin || (isCoordinator && currentUser?.DepartmentId != null && post.DepartmentId != null && currentUser.DepartmentId == post.DepartmentId);
+
+            // Nếu bài viết chưa xuất bản (chờ duyệt): Chỉ người có quyền duyệt hoặc chính tác giả mới được xem
+            if (!post.IsPublished && !canApprove && !isAuthor && !User.IsInRole("QA Manager"))
+            {
+                TempData["ErrorMessage"] = "Bài viết này đang ở trạng thái 'Chờ duyệt' và chưa được xuất bản ra bên ngoài.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            ViewBag.CanApprove = canApprove;
             return View(post);
         }
 
@@ -164,9 +234,17 @@ namespace ContentManagementSystem.Controllers
                 postDto.DepartmentId = currentUser.DepartmentId;
             }
 
+            // BẮT BUỘC DUYỆT: Mọi bài viết tạo mới đều bắt đầu ở trạng thái Chờ duyệt (IsPublished = false)
+            // Chỉ Admin mới có quyền tự động xuất bản ngay nếu chọn
+            if (!User.IsInRole("Admin"))
+            {
+                postDto.IsPublished = false;
+            }
+
             if (ModelState.IsValid)
             {
                 await _postService.CreateAsync(postDto);
+                InvalidateDashboardCache();
 
                 // Gửi email thông báo tới đúng QA Coordinator của phòng ban đó và Admin
                 try
@@ -235,6 +313,13 @@ namespace ContentManagementSystem.Controllers
             var postDto = await _postService.GetByIdAsync(id.Value);
             if (postDto == null) return NotFound();
 
+            var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var currentUser = !string.IsNullOrEmpty(currentUserId) ? await _userManager.FindByIdAsync(currentUserId) : null;
+            bool isAdmin = User.IsInRole("Admin");
+            bool isCoordinator = User.IsInRole("QA Coordinator");
+            bool canApprove = isAdmin || (isCoordinator && currentUser?.DepartmentId != null && postDto.DepartmentId != null && currentUser.DepartmentId == postDto.DepartmentId);
+            ViewBag.CanApprove = canApprove;
+
             await PopulateDropdownsAsync(postDto.AuthorId, postDto.CategoryId, postDto.DepartmentId);
             return View(postDto);
         }
@@ -246,11 +331,28 @@ namespace ContentManagementSystem.Controllers
         {
             if (id != postDto.Id) return NotFound();
 
+            var originalPost = await _postService.GetByIdAsync(id);
+            if (originalPost == null) return NotFound();
+
+            var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var currentUser = !string.IsNullOrEmpty(currentUserId) ? await _userManager.FindByIdAsync(currentUserId) : null;
+            bool isAdmin = User.IsInRole("Admin");
+            bool isCoordinator = User.IsInRole("QA Coordinator");
+            bool canApprove = isAdmin || (isCoordinator && currentUser?.DepartmentId != null && originalPost.DepartmentId != null && currentUser.DepartmentId == originalPost.DepartmentId);
+
+            // Nếu người sửa không có quyền duyệt: không cho phép tự ý xuất bản bài viết
+            if (!canApprove)
+            {
+                postDto.IsPublished = originalPost.IsPublished;
+            }
+
             if (ModelState.IsValid)
             {
                 try
                 {
                     await _postService.UpdateAsync(postDto);
+                    InvalidateDashboardCache();
+                    TempData["SuccessMessage"] = "Cập nhật bài viết thành công!";
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -260,6 +362,7 @@ namespace ContentManagementSystem.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+            ViewBag.CanApprove = canApprove;
             await PopulateDropdownsAsync(postDto.AuthorId, postDto.CategoryId, postDto.DepartmentId);
             return View(postDto);
         }
@@ -283,6 +386,7 @@ namespace ContentManagementSystem.Controllers
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
             await _postService.DeleteAsync(id);
+            InvalidateDashboardCache();
             return RedirectToAction(nameof(Index));
         }
     }

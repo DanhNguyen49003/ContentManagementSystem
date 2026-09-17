@@ -1,0 +1,320 @@
+@model ContentManagementSystem.ViewModels.Auth.VerifyOtpViewModel
+@{
+    ViewData["Title"] = "Xác thực mã OTP";
+    Layout = "_AuthLayout";
+}
+
+<div class="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 p-8 sm:p-10">
+    <!-- Header with Icon -->
+    <div class="text-center mb-6">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/30 mb-4">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+        </div>
+        <h1 class="text-2xl font-black text-slate-800 tracking-tight">Xác thực tài khoản</h1>
+        <p class="text-xs text-slate-500 mt-2 font-medium">Vui lòng nhập mã OTP gồm 6 chữ số đã được gửi tới:</p>
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 border border-indigo-100/80 rounded-full mt-2 text-indigo-700 text-xs font-semibold">
+            <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            <span class="truncate max-w-[260px]">@Model.Email</span>
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div id="alertSuccess" class="mb-5 p-3.5 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-700 text-xs font-medium flex items-center gap-2">
+            <svg class="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>@TempData["SuccessMessage"]</span>
+        </div>
+    }
+
+    @if (TempData["InfoMessage"] != null)
+    {
+        <div class="mb-5 p-3.5 bg-sky-50 border border-sky-100 rounded-xl text-sky-700 text-xs font-medium flex items-center gap-2">
+            <svg class="w-4 h-4 text-sky-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>@TempData["InfoMessage"]</span>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="mb-5 p-3.5 bg-rose-50 border border-rose-100 rounded-xl text-rose-700 text-xs font-medium flex items-center gap-2">
+            <svg class="w-4 h-4 text-rose-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>@TempData["ErrorMessage"]</span>
+        </div>
+    }
+
+    <!-- Dynamic Alert Box for AJAX Resend Result -->
+    <div id="dynamicAlert" class="hidden mb-5 p-3.5 rounded-xl text-xs font-medium flex items-center gap-2"></div>
+
+    <!-- OTP Form -->
+    <form asp-controller="Auth" asp-action="VerifyOtp" method="post" id="otpForm" class="space-y-6">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="p-3.5 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 text-xs font-medium" role="alert"></div>
+
+        <input type="hidden" asp-for="Email" />
+        <input type="hidden" asp-for="ReturnUrl" />
+        <input type="hidden" asp-for="OtpCode" id="hiddenOtpCode" />
+
+        <!-- 6 Digit Inputs -->
+        <div>
+            <div class="flex items-center justify-center gap-2 sm:gap-3" id="otpInputContainer">
+                <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit w-11 h-14 sm:w-12 sm:h-16 text-center text-2xl font-black rounded-2xl bg-slate-50 border-2 border-slate-200 text-slate-800 focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all outline-none" autocomplete="off" />
+                <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit w-11 h-14 sm:w-12 sm:h-16 text-center text-2xl font-black rounded-2xl bg-slate-50 border-2 border-slate-200 text-slate-800 focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all outline-none" autocomplete="off" />
+                <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit w-11 h-14 sm:w-12 sm:h-16 text-center text-2xl font-black rounded-2xl bg-slate-50 border-2 border-slate-200 text-slate-800 focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all outline-none" autocomplete="off" />
+                <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit w-11 h-14 sm:w-12 sm:h-16 text-center text-2xl font-black rounded-2xl bg-slate-50 border-2 border-slate-200 text-slate-800 focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all outline-none" autocomplete="off" />
+                <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit w-11 h-14 sm:w-12 sm:h-16 text-center text-2xl font-black rounded-2xl bg-slate-50 border-2 border-slate-200 text-slate-800 focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all outline-none" autocomplete="off" />
+                <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit w-11 h-14 sm:w-12 sm:h-16 text-center text-2xl font-black rounded-2xl bg-slate-50 border-2 border-slate-200 text-slate-800 focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all outline-none" autocomplete="off" />
+            </div>
+            <span asp-validation-for="OtpCode" class="text-xs text-rose-500 mt-2 block text-center font-medium"></span>
+        </div>
+
+        <!-- Countdown Timer -->
+        <div class="flex items-center justify-center gap-1.5 text-xs text-slate-500 font-medium">
+            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Mã có hiệu lực trong:</span>
+            <span id="countdownDisplay" class="font-bold text-indigo-600 font-mono tracking-wider">05:00</span>
+        </div>
+
+        <!-- Submit Button -->
+        <div>
+            <button type="submit" id="btnSubmitOtp" class="w-full flex items-center justify-center gap-2 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-500/30 transition-all hover:shadow-none active:scale-[0.98]">
+                <span>Xác nhận & Hoàn tất</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Resend OTP Section -->
+        <div class="text-center pt-2">
+            <p class="text-xs text-slate-500">
+                Chưa nhận được mã?
+                <button type="button" id="btnResendOtp" class="font-bold text-indigo-600 hover:text-indigo-700 hover:underline transition-colors focus:outline-none">
+                    Gửi lại mã OTP
+                </button>
+            </p>
+        </div>
+    </form>
+
+    <!-- Footer link to Login / Register -->
+    <div class="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+        <a asp-controller="Auth" asp-action="Register" class="hover:text-indigo-600 transition-colors flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            <span>Đổi email khác</span>
+        </a>
+        <a asp-controller="Auth" asp-action="Login" class="font-bold text-indigo-600 hover:text-indigo-700 hover:underline">
+            Đăng nhập
+        </a>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const digits = Array.from(document.querySelectorAll('.otp-digit'));
+            const hiddenOtpInput = document.getElementById('hiddenOtpCode');
+            const otpForm = document.getElementById('otpForm');
+            const countdownEl = document.getElementById('countdownDisplay');
+            const btnResend = document.getElementById('btnResendOtp');
+            const dynamicAlert = document.getElementById('dynamicAlert');
+            const emailValue = document.querySelector('input[name="Email"]').value;
+
+            // Auto focus first digit
+            if (digits.length > 0) {
+                digits[0].focus();
+            }
+
+            function syncHiddenValue() {
+                const code = digits.map(d => d.value).join('');
+                hiddenOtpInput.value = code;
+                return code;
+            }
+
+            // Digit input navigation and validation
+            digits.forEach((input, index) => {
+                input.addEventListener('input', function (e) {
+                    const val = e.target.value;
+                    if (!/^\d*$/.test(val)) {
+                        e.target.value = '';
+                        return;
+                    }
+
+                    if (val.length > 0) {
+                        e.target.value = val.slice(-1); // Only keep the last digit
+                        if (index < digits.length - 1) {
+                            digits[index + 1].focus();
+                        }
+                    }
+                    const code = syncHiddenValue();
+                    if (code.length === 6) {
+                        // Highlight or ready
+                    }
+                });
+
+                input.addEventListener('keydown', function (e) {
+                    if (e.key === 'Backspace') {
+                        if (!e.target.value && index > 0) {
+                            digits[index - 1].focus();
+                            digits[index - 1].value = '';
+                        }
+                        setTimeout(syncHiddenValue, 10);
+                    } else if (e.key === 'ArrowLeft' && index > 0) {
+                        digits[index - 1].focus();
+                    } else if (e.key === 'ArrowRight' && index < digits.length - 1) {
+                        digits[index + 1].focus();
+                    }
+                });
+
+                // Handle pasting 6 digits
+                input.addEventListener('paste', function (e) {
+                    e.preventDefault();
+                    const pasteData = (e.clipboardData || window.clipboardData).getData('text').trim();
+                    const numericOnly = pasteData.replace(/\D/g, '').slice(0, 6);
+                    if (numericOnly.length > 0) {
+                        for (let i = 0; i < digits.length; i++) {
+                            digits[i].value = numericOnly[i] || '';
+                        }
+                        syncHiddenValue();
+                        const focusIdx = Math.min(numericOnly.length, digits.length - 1);
+                        digits[focusIdx].focus();
+                    }
+                });
+            });
+
+            // Form submit validation
+            otpForm.addEventListener('submit', function (e) {
+                const code = syncHiddenValue();
+                if (code.length !== 6 || !/^\d{6}$/.test(code)) {
+                    e.preventDefault();
+                    showDynamicAlert('Vui lòng nhập đầy đủ 6 chữ số mã OTP.', 'error');
+                    const emptyIndex = digits.findIndex(d => !d.value);
+                    if (emptyIndex !== -1) {
+                        digits[emptyIndex].focus();
+                    } else {
+                        digits[0].focus();
+                    }
+                }
+            });
+
+            // 5-minute Countdown Timer (300 seconds)
+            let totalSeconds = 300;
+            let timerInterval = null;
+
+            function startTimer() {
+                clearInterval(timerInterval);
+                totalSeconds = 300;
+                updateTimerDisplay();
+
+                timerInterval = setInterval(function () {
+                    totalSeconds--;
+                    if (totalSeconds <= 0) {
+                        clearInterval(timerInterval);
+                        countdownEl.textContent = '00:00';
+                        countdownEl.classList.remove('text-indigo-600');
+                        countdownEl.classList.add('text-rose-600');
+                        showDynamicAlert('Mã OTP đã hết hiệu lực. Vui lòng bấm "Gửi lại mã OTP".', 'error');
+                    } else {
+                        updateTimerDisplay();
+                    }
+                }, 1000);
+            }
+
+            function updateTimerDisplay() {
+                const m = Math.floor(totalSeconds / 60);
+                const s = totalSeconds % 60;
+                countdownEl.textContent = `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+                countdownEl.classList.add('text-indigo-600');
+                countdownEl.classList.remove('text-rose-600');
+            }
+
+            startTimer();
+
+            // Helper to show dynamic alert
+            function showDynamicAlert(message, type) {
+                dynamicAlert.classList.remove('hidden', 'bg-emerald-50', 'border-emerald-100', 'text-emerald-700', 'bg-rose-50', 'border-rose-100', 'text-rose-700');
+                if (type === 'success') {
+                    dynamicAlert.classList.add('bg-emerald-50', 'border', 'border-emerald-100', 'text-emerald-700');
+                    dynamicAlert.innerHTML = `
+                        <svg class="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>${message}</span>
+                    `;
+                } else {
+                    dynamicAlert.classList.add('bg-rose-50', 'border', 'border-rose-100', 'text-rose-700');
+                    dynamicAlert.innerHTML = `
+                        <svg class="w-4 h-4 text-rose-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>${message}</span>
+                    `;
+                }
+            }
+
+            // Resend OTP via AJAX
+            btnResend.addEventListener('click', function () {
+                btnResend.disabled = true;
+                const originalText = btnResend.innerHTML;
+                btnResend.innerHTML = '<span class="inline-block animate-spin mr-1">↻</span> Đang gửi...';
+
+                const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+                const formData = new FormData();
+                formData.append('email', emailValue);
+                formData.append('__RequestVerificationToken', antiForgeryToken);
+
+                fetch('/Auth/ResendOtp', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        showDynamicAlert(data.message || 'Mã OTP mới đã được gửi tới email của bạn!', 'success');
+                        startTimer();
+
+                        // Clear inputs
+                        digits.forEach(d => d.value = '');
+                        syncHiddenValue();
+                        digits[0].focus();
+                    } else {
+                        showDynamicAlert(data.message || 'Không thể gửi lại mã OTP. Vui lòng thử lại sau.', 'error');
+                    }
+                })
+                .catch(err => {
+                    showDynamicAlert('Đã xảy ra lỗi kết nối. Vui lòng thử lại sau giây lát.', 'error');
+                })
+                .finally(() => {
+                    // Cooldown 60s theo tiêu chuẩn Rate Limiting
+                    let cooldown = 60;
+                    btnResend.innerHTML = `Gửi lại sau (${cooldown}s)`;
+                    const cdInterval = setInterval(function () {
+                        cooldown--;
+                        if (cooldown <= 0) {
+                            clearInterval(cdInterval);
+                            btnResend.disabled = false;
+                            btnResend.innerHTML = originalText;
+                        } else {
+                            btnResend.innerHTML = `Gửi lại sau (${cooldown}s)`;
+                        }
+                    }, 1000);
+                });
+            });
+        });
+    </script>
+}
+

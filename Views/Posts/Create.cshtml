@@ -134,12 +134,36 @@
                     <span asp-validation-for="Content" class="text-xs text-rose-500 mt-1 block"></span>
                 </div>
 
-                <!-- IsPublished Toggle -->
+                <!-- Quy trình phê duyệt bài viết -->
                 <div class="pt-2">
-                    <label class="relative flex items-center gap-3 cursor-pointer">
-                        <input asp-for="IsPublished" type="checkbox" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
-                        <span class="text-sm font-medium text-gray-700 select-none">Xuất bản bài viết ngay bây giờ</span>
-                    </label>
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <div class="p-4 rounded-xl bg-blue-50/60 border border-blue-100 flex items-center justify-between gap-3">
+                            <div>
+                                <label class="relative flex items-center gap-3 cursor-pointer">
+                                    <input asp-for="IsPublished" type="checkbox" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
+                                    <span class="text-sm font-semibold text-gray-800 select-none">Xuất bản bài viết ngay bây giờ (Quyền Quản trị viên)</span>
+                                </label>
+                                <p class="text-xs text-gray-500 mt-0.5 ml-7">Với tư cách Quản trị viên, bạn có thể xuất bản bài viết ngay mà không cần qua quy trình duyệt.</p>
+                            </div>
+                            <span class="px-2.5 py-1 bg-blue-100 text-blue-800 text-[11px] font-bold rounded-lg uppercase tracking-wider">Admin</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <input type="hidden" asp-for="IsPublished" value="false" />
+                        <div class="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-start gap-3">
+                            <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <div class="space-y-1">
+                                <p class="font-bold text-amber-900 text-sm">Quy trình kiểm duyệt bài viết:</p>
+                                <p class="text-amber-800 leading-relaxed">
+                                    Bài viết sau khi được tạo sẽ ở trạng thái <strong>Chờ duyệt (Bản nháp)</strong>. Bài viết chỉ được hiển thị công khai trên hệ thống sau khi được <strong>Admin</strong> hoặc <strong>QA Coordinator phụ trách phòng ban</strong> kiểm tra và phê duyệt.
+                                </p>
+                            </div>
+                        </div>
+                    }
                 </div>
             </div>
 
