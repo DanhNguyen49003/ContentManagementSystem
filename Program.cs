@@ -55,8 +55,10 @@ builder.Services.AddScoped<INewsletterSubscriberService, NewsletterSubscriberSer
 builder.Services.AddScoped<IPageService, PageService>();
 builder.Services.AddScoped<IPartnerService, PartnerService>();
 builder.Services.AddScoped<IPostService, PostService>();
+builder.Services.AddScoped<ISubmissionWindowService, SubmissionWindowService>();
 builder.Services.AddScoped<ISettingService, SettingService>();
 builder.Services.AddScoped<ITagService, TagService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ITestimonialService, TestimonialService>();
 
 // ===== 5. DbContext Configuration (Supabase PostgreSQL) =====

@@ -1,5 +1,7 @@
 @using ContentManagementSystem.Services
+@using ContentManagementSystem.Service.Interface
 @inject ICurrentUserService CurrentUserService
+@inject INotificationService NotificationService
 
 @{
     var currentUser = await CurrentUserService.GetCurrentUserAsync();
@@ -12,6 +14,10 @@
     var userAvatar = currentUser.GetAvatarOrDefault();
     var roleName = currentUser.RoleName;
     var roleBadgeClass = currentUser.RoleBadgeClass;
+    var departmentName = currentUser.DepartmentName;
+
+    var notifications = isSignedIn ? await NotificationService.GetNotificationsForUserAsync(User) : new List<ContentManagementSystem.ApplicationCore.DTOs.NotificationDto>();
+    var unreadCount = notifications.Count;
 }
 
 <!DOCTYPE html>
@@ -73,6 +79,9 @@
             padding-left: 0.5rem;
             padding-right: 0.5rem;
         }
+        html.sidebar-collapsed #sidebarHeader > div, body.sidebar-collapsed #sidebarHeader > div {
+            justify-content: center;
+        }
         html.sidebar-collapsed #sidebarFooter .user-profile-card, body.sidebar-collapsed #sidebarFooter .user-profile-card {
             justify-content: center;
             padding: 0.25rem 0;
@@ -89,24 +98,19 @@
 
     <!-- Sidebar -->
     <aside id="sidebar" class="bg-white border-r border-gray-200 flex flex-col h-screen fixed top-0 left-0 z-30 shadow-sm overflow-hidden">
-        <!-- Logo & Collapse Button -->
-        <div id="sidebarHeader" class="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
-            <div class="flex items-center gap-3 overflow-hidden cursor-pointer select-none" onclick="toggleSidebar()" title="CMS Portal (Bấm để thu gọn/mở rộng)">
-                <div class="w-8 h-8 bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0 transition-colors">
+        <!-- Logo & Sidebar Toggle Button -->
+        <div id="sidebarHeader" class="flex items-center px-4 py-3.5 border-b border-gray-100 flex-shrink-0">
+            <div class="flex items-center gap-3 overflow-hidden select-none w-full">
+                <button type="button" onclick="toggleSidebar()" class="w-9 h-9 bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0 transition-all cursor-pointer text-white" title="Thu gọn / Mở rộng menu (Ctrl+B)">
                     <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
                     </svg>
-                </div>
-                <div class="sidebar-text">
-                    <span class="font-bold text-gray-900 text-base leading-none block">CMS Portal</span>
-                    <span class="text-[10px] text-gray-400 font-medium mt-0.5 block uppercase tracking-wider">Hệ thống quản trị</span>
+                </button>
+                <div class="sidebar-text cursor-pointer select-none overflow-hidden" onclick="toggleSidebar()" title="Bấm để thu gọn/mở rộng">
+                    <span class="font-bold text-gray-900 text-base leading-none block truncate">CMS Portal</span>
+                    <span class="text-[10px] text-gray-400 font-medium mt-1 block uppercase tracking-wider truncate">Hệ thống quản trị</span>
                 </div>
             </div>
-            <button type="button" onclick="toggleSidebar()" class="sidebar-text p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all cursor-pointer" title="Thu gọn menu (Ctrl+B)">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                </svg>
-            </button>
         </div>
 
         <!-- Navigation Menu with Role Visibility (Scrollable) -->
@@ -146,10 +150,18 @@
             <!-- Nội dung: Admin, QA Manager, QA Coordinator, Customer -->
             <p class="sidebar-group-label">Nội dung</p>
 
-            <a asp-controller="Posts" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Posts" ? "active" : "")" title="Bài viết">
-                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                <span class="sidebar-text">Bài viết</span>
+            <a asp-controller="Posts" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Posts" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")" title="Tất cả bài viết">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
+                <span class="sidebar-text">Tất cả bài viết</span>
             </a>
+
+            @if (isSignedIn)
+            {
+                <a asp-controller="Posts" asp-action="MyPosts" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Posts" && ViewContext.RouteData.Values["action"]?.ToString() == "MyPosts" ? "active" : "")" title="Bài viết của tôi">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    <span class="sidebar-text">Bài viết của tôi</span>
+                </a>
+            }
 
             @if (isAdmin || isQAManager || isQACoordinator)
             {
@@ -159,10 +171,13 @@
                 </a>
             }
 
-            <a asp-controller="Tags" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Tags" ? "active" : "")" title="Thẻ Tags">
-                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" /></svg>
-                <span class="sidebar-text">Thẻ Tags</span>
-            </a>
+            @if (isAdmin || isQAManager)
+            {
+                <a asp-controller="Tags" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Tags" ? "active" : "")" title="Quản lý Tags">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" /></svg>
+                    <span class="sidebar-text">Quản lý Tags</span>
+                </a>
+            }
 
             @if (isAdmin || isQAManager)
             {
@@ -177,6 +192,14 @@
                 <a asp-controller="Comments" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Comments" ? "active" : "")" title="Bình luận">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
                     <span class="sidebar-text">Bình luận</span>
+                </a>
+            }
+
+            @if (isAdmin || isQAManager)
+            {
+                <a href="/Posts/ExportCsv" class="sidebar-link" title="Xuất dữ liệu CSV">
+                    <svg class="w-5 h-5 flex-shrink-0 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <span class="sidebar-text font-semibold text-emerald-700">Xuất dữ liệu CSV</span>
                 </a>
             }
 
@@ -195,6 +218,10 @@
                 <a asp-controller="Banners" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Banners" ? "active" : "")" title="Banners">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                     <span class="sidebar-text">Banners</span>
+                </a>
+                <a asp-controller="SubmissionWindows" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "SubmissionWindows" ? "active" : "")" title="Đợt nộp bài">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <span class="sidebar-text">Đợt nộp bài</span>
                 </a>
             }
 
@@ -239,13 +266,22 @@
         <div id="sidebarFooter" class="border-t border-gray-100 p-3 bg-gray-50/50 flex-shrink-0">
             @if (isSignedIn)
             {
-                <a asp-controller="Profile" asp-action="Index" class="user-profile-card flex items-center gap-3 w-full p-1.5 rounded-xl hover:bg-white border border-transparent hover:border-gray-200 transition-all group" title="@displayName (@roleName)">
+                <a asp-controller="Profile" asp-action="Index" class="user-profile-card flex items-center gap-3 w-full p-1.5 rounded-xl hover:bg-white border border-transparent hover:border-gray-200 transition-all group" title="@displayName (@roleName@(string.IsNullOrEmpty(departmentName) ? "" : $" - {departmentName}"))">
                     <img src="@userAvatar" alt="@displayName" class="w-9 h-9 rounded-full object-cover border border-gray-200 shadow-sm flex-shrink-0 bg-gray-100 ring-2 ring-blue-500/10 group-hover:ring-blue-500/30" onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name=@(Uri.EscapeDataString(displayName))&background=2563eb&color=fff&bold=true';" />
                     <div class="sidebar-text min-w-0 flex-1">
                         <p class="text-xs font-semibold text-gray-900 truncate group-hover:text-blue-600 transition-colors">@displayName</p>
-                        <span class="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md @roleBadgeClass">
-                            @roleName
-                        </span>
+                        <div class="flex flex-col items-start gap-1 mt-0.5">
+                            <span class="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md @roleBadgeClass">
+                                @roleName
+                            </span>
+                            @if (!string.IsNullOrEmpty(departmentName))
+                            {
+                                <span class="inline-flex items-center gap-1 text-[10px] font-medium text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100 truncate max-w-full" title="Phòng ban: @departmentName">
+                                    <svg class="w-2.5 h-2.5 flex-shrink-0 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                                    <span class="truncate">@departmentName</span>
+                                </span>
+                            }
+                        </div>
                     </div>
                 </a>
             }
@@ -264,17 +300,19 @@
         <!-- Top bar -->
         <header class="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between sticky top-0 z-20 shadow-sm">
             <div class="flex items-center gap-3">
-                <button type="button" onclick="toggleSidebar()" class="p-2 -ml-2 rounded-xl text-gray-500 hover:text-blue-600 hover:bg-blue-50 border border-gray-200/70 hover:border-blue-200 transition-all active:scale-95 cursor-pointer shadow-xs" title="Thu gọn / Mở rộng menu (Ctrl+B)">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
-                    </svg>
-                </button>
                 <h1 class="text-xl font-bold text-gray-800">@ViewData["Title"]</h1>
                 @if (isSignedIn)
                 {
                     <span class="text-xs px-2.5 py-0.5 rounded-full font-semibold @roleBadgeClass">
                         Vai trò: @roleName
                     </span>
+                    @if (!string.IsNullOrEmpty(departmentName))
+                    {
+                        <span class="text-xs px-2.5 py-0.5 rounded-full font-medium bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1.5 shadow-sm">
+                            <svg class="w-3.5 h-3.5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                            <span>@departmentName</span>
+                        </span>
+                    }
                 }
             </div>
             <div class="flex items-center gap-3.5">
@@ -288,6 +326,107 @@
                 <span class="text-xs text-gray-400 font-medium hidden md:inline">@DateTime.Now.ToString("dd/MM/yyyy HH:mm")</span>
                 @if (isSignedIn)
                 {
+                    <!-- Notification Bell Component -->
+                    <div class="relative">
+                        <button type="button" 
+                                id="notificationBtn" 
+                                onclick="toggleNotificationDropdown(event)" 
+                                class="relative p-2 rounded-xl text-gray-500 hover:text-blue-600 hover:bg-blue-50/80 border border-transparent hover:border-blue-100 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                title="Thông báo (@unreadCount)">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                            </svg>
+                            @if (unreadCount > 0)
+                            {
+                                <span id="bellUnreadBadge" class="absolute -top-0.5 -right-0.5 flex h-4 min-w-[1rem] px-1 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-white">
+                                    @(unreadCount > 9 ? "9+" : unreadCount.ToString())
+                                </span>
+                            }
+                        </button>
+
+                        <!-- Notification Dropdown -->
+                        <div id="notificationDropdown" class="hidden absolute right-0 mt-2.5 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden transform transition-all duration-200">
+                            <!-- Header -->
+                            <div class="px-4 py-3 bg-gradient-to-r from-blue-50/70 to-indigo-50/70 border-b border-blue-100/60 flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-sm text-gray-800">Thông báo</span>
+                                    @if (unreadCount > 0)
+                                    {
+                                        <span id="notifUnreadBadge" class="text-[11px] px-2 py-0.5 rounded-full font-bold bg-blue-600 text-white shadow-sm transition-all">@unreadCount mới</span>
+                                    }
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    @if (unreadCount > 0)
+                                    {
+                                        <button type="button" 
+                                                id="btnMarkAllRead" 
+                                                onclick="markAllNotificationsAsRead(event)" 
+                                                class="text-[11px] text-blue-600 hover:text-blue-800 font-bold hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+                                                title="Đánh dấu tất cả thông báo là đã đọc">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                            <span>Đọc tất cả</span>
+                                        </button>
+                                        <span class="text-gray-300 text-xs">|</span>
+                                    }
+                                    <span class="text-[11px] font-medium text-gray-500 bg-white/80 px-2 py-0.5 rounded-lg border border-gray-200/60">@roleName</span>
+                                </div>
+                            </div>
+
+                            <!-- List -->
+                            <div id="notificationList" class="max-h-80 overflow-y-auto divide-y divide-gray-50">
+                                @if (notifications.Any())
+                                {
+                                    @foreach (var notif in notifications)
+                                    {
+                                        <a href="@notif.LinkUrl" class="notif-item flex items-start gap-3 p-3.5 hover:bg-blue-50/40 transition-colors group">
+                                            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base shadow-xs @notif.BadgeClass">
+                                                @notif.Icon
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <div class="flex items-baseline justify-between gap-1 mb-0.5">
+                                                    <span class="text-xs font-bold text-gray-800 group-hover:text-blue-600 transition-colors truncate">@notif.Title</span>
+                                                    <span class="text-[10px] font-medium text-gray-400 whitespace-nowrap">@notif.TimeAgo</span>
+                                                </div>
+                                                <p class="text-xs text-gray-600 line-clamp-2 leading-relaxed">@notif.Message</p>
+                                            </div>
+                                        </a>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="py-8 text-center px-4">
+                                        <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-2 text-xl">
+                                            ✓
+                                        </div>
+                                        <p class="text-xs font-semibold text-gray-700">Không có thông báo mới</p>
+                                        <p class="text-[11px] text-gray-400 mt-0.5">Bạn đã cập nhật đầy đủ các thông tin mới nhất.</p>
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- Footer -->
+                            <div class="px-3 py-2 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-xs font-medium">
+                                <a asp-controller="Posts" asp-action="Index" class="text-blue-600 hover:text-blue-800 font-semibold hover:underline">
+                                    Xem tất cả bài viết &rarr;
+                                </a>
+                                <div class="flex items-center gap-3">
+                                    @if (unreadCount > 0)
+                                    {
+                                        <button type="button" 
+                                                onclick="markAllNotificationsAsRead(event)" 
+                                                class="text-xs text-blue-600 hover:text-blue-800 font-semibold hover:underline cursor-pointer">
+                                            Đọc hết
+                                        </button>
+                                        <span class="text-gray-300 text-xs">|</span>
+                                    }
+                                    <button type="button" onclick="document.getElementById('notificationDropdown').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 cursor-pointer">
+                                        Đóng
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <span class="text-xs text-gray-200 hidden md:inline">|</span>
                     <a asp-controller="Profile" asp-action="Index" class="flex items-center gap-2.5 px-2 py-1 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all group" title="Xem hồ sơ cá nhân">
                         <img src="@userAvatar" alt="@displayName" class="w-8 h-8 rounded-full object-cover border border-gray-200 ring-2 ring-blue-500/20 group-hover:ring-blue-500 shadow-sm flex-shrink-0 bg-gray-100" onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name=@(Uri.EscapeDataString(displayName))&background=2563eb&color=fff&bold=true';" />
@@ -347,6 +486,97 @@
                 e.preventDefault();
                 toggleSidebar();
             }
+        });
+
+        // Xử lý đóng mở dropdown Thông báo
+        function toggleNotificationDropdown(e) {
+            if (e) {
+                e.stopPropagation();
+            }
+            const dropdown = document.getElementById('notificationDropdown');
+            if (dropdown) {
+                dropdown.classList.toggle('hidden');
+            }
+        }
+
+        document.addEventListener('click', function(e) {
+            const dropdown = document.getElementById('notificationDropdown');
+            const btn = document.getElementById('notificationBtn');
+            if (dropdown && !dropdown.classList.contains('hidden')) {
+                if (!dropdown.contains(e.target) && (!btn || !btn.contains(e.target))) {
+                    dropdown.classList.add('hidden');
+                }
+            }
+        });
+
+        // Đánh dấu tất cả thông báo là đã đọc
+        const notifSig = "@(unreadCount)_@(notifications.FirstOrDefault()?.Title.GetHashCode() ?? 0)";
+
+        function markAllNotificationsAsRead(e) {
+            if (e) {
+                e.stopPropagation();
+            }
+
+            // Ẩn badge đỏ trên chuông thông báo
+            const bellBadge = document.getElementById('bellUnreadBadge');
+            if (bellBadge) {
+                bellBadge.style.display = 'none';
+            }
+
+            // Cập nhật huy hiệu trong header dropdown
+            const notifBadge = document.getElementById('notifUnreadBadge');
+            if (notifBadge) {
+                notifBadge.textContent = '0 mới';
+                notifBadge.classList.remove('bg-blue-600', 'text-white');
+                notifBadge.classList.add('bg-gray-100', 'text-gray-500');
+            }
+
+            // Cập nhật trạng thái nút bấm "Đọc tất cả"
+            const btnMark = document.getElementById('btnMarkAllRead');
+            if (btnMark) {
+                btnMark.innerHTML = '<span class="text-emerald-600 font-bold flex items-center gap-1">✓ Đã đọc</span>';
+                btnMark.disabled = true;
+                btnMark.classList.remove('cursor-pointer', 'hover:underline');
+            }
+
+            // Làm dịu các mục thông báo
+            document.querySelectorAll('.notif-item').forEach(item => {
+                item.classList.add('opacity-75');
+            });
+
+            // Lưu vào localStorage
+            try {
+                localStorage.setItem('cms_notif_read_sig', notifSig);
+            } catch (err) {}
+        }
+
+        // Tự động kiểm tra trạng thái đã đọc khi tải trang
+        document.addEventListener('DOMContentLoaded', function () {
+            try {
+                const savedSig = localStorage.getItem('cms_notif_read_sig');
+                if (savedSig && savedSig === notifSig) {
+                    const bellBadge = document.getElementById('bellUnreadBadge');
+                    if (bellBadge) bellBadge.style.display = 'none';
+
+                    const notifBadge = document.getElementById('notifUnreadBadge');
+                    if (notifBadge) {
+                        notifBadge.textContent = '0 mới';
+                        notifBadge.classList.remove('bg-blue-600', 'text-white');
+                        notifBadge.classList.add('bg-gray-100', 'text-gray-500');
+                    }
+
+                    const btnMark = document.getElementById('btnMarkAllRead');
+                    if (btnMark) {
+                        btnMark.innerHTML = '<span class="text-emerald-600 font-bold flex items-center gap-1">✓ Đã đọc</span>';
+                        btnMark.disabled = true;
+                        btnMark.classList.remove('cursor-pointer', 'hover:underline');
+                    }
+
+                    document.querySelectorAll('.notif-item').forEach(item => {
+                        item.classList.add('opacity-75');
+                    });
+                }
+            } catch (err) {}
         });
     </script>
     @await RenderSectionAsync("Scripts", required: false)

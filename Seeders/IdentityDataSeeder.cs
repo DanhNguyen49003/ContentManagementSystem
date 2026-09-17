@@ -58,8 +58,26 @@ namespace ContentManagementSystem.Seeders
                             ""IsDeleted"" boolean NOT NULL DEFAULT false,
                             ""DeletedAt"" timestamp with time zone
                         );
+                        CREATE TABLE IF NOT EXISTS ""SubmissionWindows"" (
+                            ""Id"" uuid NOT NULL PRIMARY KEY,
+                            ""Name"" character varying(150) NOT NULL,
+                            ""Description"" character varying(500),
+                            ""StartDate"" timestamp with time zone NOT NULL,
+                            ""ClosureDate"" timestamp with time zone NOT NULL,
+                            ""FinalClosureDate"" timestamp with time zone NOT NULL,
+                            ""IsActive"" boolean NOT NULL DEFAULT true,
+                            ""CreatedAt"" timestamp with time zone NOT NULL,
+                            ""IsDeleted"" boolean NOT NULL DEFAULT false,
+                            ""DeletedAt"" timestamp with time zone
+                        );
                         ALTER TABLE ""AspNetUsers"" ADD COLUMN IF NOT EXISTS ""DepartmentId"" uuid;
                         ALTER TABLE ""Posts"" ADD COLUMN IF NOT EXISTS ""DepartmentId"" uuid;
+                        ALTER TABLE ""Posts"" ADD COLUMN IF NOT EXISTS ""IsAnonymous"" boolean DEFAULT false;
+                        ALTER TABLE ""Posts"" ADD COLUMN IF NOT EXISTS ""Status"" character varying(50) DEFAULT 'Pending';
+                        ALTER TABLE ""Posts"" ADD COLUMN IF NOT EXISTS ""ReviewerFeedback"" character varying(1000);
+                        ALTER TABLE ""Posts"" ADD COLUMN IF NOT EXISTS ""ReviewedAt"" timestamp with time zone;
+                        ALTER TABLE ""Posts"" ADD COLUMN IF NOT EXISTS ""ReviewedById"" text;
+                        ALTER TABLE ""Posts"" ADD COLUMN IF NOT EXISTS ""SubmissionWindowId"" uuid;
                     ");
 
                     var itDept = await contentDb.Departments.FirstOrDefaultAsync(d => d.Name == "Khoa Công nghệ thông tin");
@@ -103,6 +121,44 @@ namespace ContentManagementSystem.Seeders
                     // Tự động gán phòng ban cho tất cả bài viết chưa có DepartmentId
                     await contentDb.Database.ExecuteSqlRawAsync($@"
                         UPDATE ""Posts"" SET ""DepartmentId"" = '{itDepartmentId}' WHERE ""DepartmentId"" IS NULL;
+                    ");
+
+                    // Tự động gán phòng ban mặc định cho tất cả user (ngoại trừ Admin) nếu chưa có DepartmentId
+                    await contentDb.Database.ExecuteSqlRawAsync($@"
+                        UPDATE ""AspNetUsers"" 
+                        SET ""DepartmentId"" = '{itDepartmentId}' 
+                        WHERE ""DepartmentId"" IS NULL 
+                          AND ""Id"" NOT IN (
+                              SELECT ur.""UserId"" FROM ""AspNetUserRoles"" ur 
+                              JOIN ""AspNetRoles"" r ON ur.""RoleId"" = r.""Id"" 
+                              WHERE UPPER(r.""Name"") = 'ADMIN' OR UPPER(r.""NormalizedName"") = 'ADMIN'
+                          );
+                    ");
+
+                    // 2b. Seed Default Submission Window
+                    var defaultWindow = await contentDb.SubmissionWindows.FirstOrDefaultAsync(w => !w.IsDeleted);
+                    if (defaultWindow == null)
+                    {
+                        defaultWindow = new ContentManagementSystem.ApplicationCore.Entities.SubmissionWindow
+                        {
+                            Id = Guid.Parse("99999999-9999-9999-9999-999999999999"),
+                            Name = "Đợt Đóng góp & Nộp Bài viết - Học kỳ Hiện tại",
+                            Description = "Đợt tiếp nhận bài viết, ý tưởng nghiên cứu và sáng kiến cải tiến cho cộng đồng học thuật.",
+                            StartDate = DateTime.UtcNow.AddDays(-30),
+                            ClosureDate = DateTime.UtcNow.AddDays(60),
+                            FinalClosureDate = DateTime.UtcNow.AddDays(90),
+                            IsActive = true,
+                            CreatedAt = DateTime.UtcNow
+                        };
+                        contentDb.SubmissionWindows.Add(defaultWindow);
+                        await contentDb.SaveChangesAsync();
+                    }
+
+                    // Tự động gán SubmissionWindow và chuẩn hóa trạng thái Status cho các bài viết hiện tại
+                    await contentDb.Database.ExecuteSqlRawAsync($@"
+                        UPDATE ""Posts"" SET ""SubmissionWindowId"" = '{defaultWindow.Id}' WHERE ""SubmissionWindowId"" IS NULL;
+                        UPDATE ""Posts"" SET ""Status"" = 'Approved' WHERE ""IsPublished"" = true AND (""Status"" IS NULL OR ""Status"" = 'Pending');
+                        UPDATE ""Posts"" SET ""Status"" = 'Pending' WHERE ""IsPublished"" = false AND ""Status"" IS NULL;
                     ");
                 }
                 catch

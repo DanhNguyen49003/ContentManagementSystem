@@ -42,14 +42,64 @@ namespace ContentManagementSystem.Controllers
                 model = new DashboardViewModel();
                 try
                 {
-                    // 1. Basic Stats
-                    model.TotalPosts = await _contentContext.Posts.CountAsync();
-                    model.PublishedPosts = await _contentContext.Posts.CountAsync(p => p.IsPublished);
+                    // 1. Basic Stats & QA Metrics
+                    var allPostsList = await _contentContext.Posts
+                        .Where(p => !p.IsDeleted)
+                        .Select(p => new { p.Id, p.IsPublished, p.Status, p.DepartmentId })
+                        .ToListAsync();
+
+                    model.TotalPosts = allPostsList.Count;
+                    model.PublishedPosts = allPostsList.Count(p => p.IsPublished);
+                    model.ApprovedPostsCount = model.PublishedPosts;
                     model.DraftPosts = model.TotalPosts - model.PublishedPosts;
+                    model.PendingPostsCount = allPostsList.Count(p => !p.IsPublished && (p.Status == "Pending" || string.IsNullOrEmpty(p.Status)));
+                    model.RejectedPostsCount = allPostsList.Count(p => p.Status == "Rejected");
+                    model.ChangesRequestedPostsCount = allPostsList.Count(p => p.Status == "ChangesRequested");
+
+                    model.ApprovalRate = model.TotalPosts > 0 ? Math.Round((double)model.ApprovedPostsCount / model.TotalPosts * 100, 1) : 0;
+                    model.RejectionRate = model.TotalPosts > 0 ? Math.Round((double)model.RejectedPostsCount / model.TotalPosts * 100, 1) : 0;
+
                     model.TotalCategories = await _contentContext.Categories.CountAsync();
                     model.TotalComments = await _contentContext.Comments.CountAsync();
                     model.TotalContactMessages = await _contentContext.ContactMessages.CountAsync();
                     model.TotalSubscribers = await _contentContext.NewsletterSubscribers.CountAsync();
+
+                    // Active Submission Window
+                    var activeWin = await _contentContext.SubmissionWindows
+                        .Where(w => w.IsActive && !w.IsDeleted)
+                        .OrderByDescending(w => w.StartDate)
+                        .FirstOrDefaultAsync();
+
+                    if (activeWin != null)
+                    {
+                        var utcNow = DateTime.UtcNow;
+                        model.HasActiveWindow = true;
+                        model.ActiveWindowName = activeWin.Name;
+                        model.ActiveWindowClosureDate = activeWin.ClosureDate;
+                        model.ActiveWindowFinalClosureDate = activeWin.FinalClosureDate;
+                        model.IsActiveWindowClosed = utcNow > activeWin.ClosureDate;
+                        model.DaysUntilClosure = Math.Max(0, (int)Math.Ceiling((activeWin.ClosureDate - utcNow).TotalDays));
+                    }
+
+                    // Department progress for QA Coordinator monitoring
+                    var allDepts = await _contentContext.Departments
+                        .Where(d => !d.IsDeleted)
+                        .Select(d => new { d.Id, d.Name })
+                        .ToListAsync();
+
+                    model.DepartmentMetrics = allDepts.Select(d =>
+                    {
+                        var deptPosts = allPostsList.Where(p => p.DepartmentId == d.Id).ToList();
+                        return new DepartmentQAMetric
+                        {
+                            DepartmentId = d.Id,
+                            DepartmentName = d.Name,
+                            TotalPosts = deptPosts.Count,
+                            ApprovedPosts = deptPosts.Count(p => p.IsPublished),
+                            PendingPosts = deptPosts.Count(p => !p.IsPublished && (p.Status == "Pending" || string.IsNullOrEmpty(p.Status))),
+                            RejectedPosts = deptPosts.Count(p => p.Status == "Rejected")
+                        };
+                    }).OrderByDescending(dm => dm.PendingPosts).ThenByDescending(dm => dm.TotalPosts).ToList();
 
                     // 2. Category Distribution (Top categories)
                     var topCategories = await _contentContext.Categories
@@ -155,6 +205,7 @@ namespace ContentManagementSystem.Controllers
                             Summary = p.Summary ?? (p.Content.Length > 120 ? p.Content.Substring(0, 120) + "..." : p.Content),
                             CategoryName = p.Category != null ? p.Category.Name : "Công nghệ",
                             AuthorName = p.Author != null ? (p.Author.FullName ?? p.Author.UserName ?? "Ban biên tập") : "Ban biên tập",
+                            IsAnonymous = p.IsAnonymous,
                             CreatedAt = p.CreatedAt,
                             CommentCount = p.Comments.Count
                         })

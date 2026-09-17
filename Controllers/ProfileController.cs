@@ -48,6 +48,7 @@ namespace ContentManagementSystem.Controllers
             }
 
             var roles = await _userManager.GetRolesAsync(user);
+            var currentUserDto = await _currentUserService.GetCurrentUserAsync();
 
             var model = new UserProfileViewModel
             {
@@ -57,6 +58,8 @@ namespace ContentManagementSystem.Controllers
                 PhoneNumber = user.PhoneNumber,
                 Avatar = user.Avatar,
                 Roles = roles,
+                DepartmentId = user.DepartmentId,
+                DepartmentName = currentUserDto.DepartmentName,
                 CreatedAt = user.CreatedAt
             };
 

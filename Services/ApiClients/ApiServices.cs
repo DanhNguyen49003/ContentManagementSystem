@@ -30,6 +30,15 @@ namespace ContentManagementSystem.Services.ApiClients
         public async Task<bool> TogglePublishAsync(Guid id)
             => await _api.PatchAsync($"api/posts/{id}/toggle-publish");
 
+        public async Task<bool> ApproveAsync(Guid id, string reviewerId)
+            => await _api.PatchAsync($"api/posts/{id}/approve");
+
+        public async Task<bool> RejectAsync(Guid id, string reviewerId, string feedback)
+            => await _api.PatchAsync($"api/posts/{id}/reject");
+
+        public async Task<bool> RequestChangesAsync(Guid id, string reviewerId, string feedback)
+            => await _api.PatchAsync($"api/posts/{id}/request-changes");
+
         public bool Exists(Guid id)
             => GetByIdAsync(id).GetAwaiter().GetResult() != null;
     }

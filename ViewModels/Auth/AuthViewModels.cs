@@ -95,6 +95,9 @@ namespace ContentManagementSystem.ViewModels.Auth
         public Microsoft.AspNetCore.Http.IFormFile? AvatarFile { get; set; }
 
         public IList<string> Roles { get; set; } = new List<string>();
+        public Guid? DepartmentId { get; set; }
+        [Display(Name = "Phòng ban")]
+        public string? DepartmentName { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 

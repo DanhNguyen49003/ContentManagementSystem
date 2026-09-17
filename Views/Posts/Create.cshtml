@@ -1,8 +1,11 @@
 @model ContentManagementSystem.ApplicationCore.DTOs.PostDto
+@using ContentManagementSystem.Services
+@inject ICurrentUserService CurrentUserService
 
 @{
     ViewData["Title"] = "Thêm bài viết mới";
     Layout = "_Layout";
+    var currentUser = await CurrentUserService.GetCurrentUserAsync();
 }
 
 <div class="max-w-4xl mx-auto space-y-6">
@@ -16,6 +19,57 @@
             &larr; Quay lại danh sách
         </a>
     </div>
+
+    @{
+        var activeWindow = ViewBag.ActiveWindow as ContentManagementSystem.ApplicationCore.DTOs.SubmissionWindowDto;
+        bool isSubmissionClosed = ViewBag.IsSubmissionClosed == true;
+    }
+
+    <!-- Submission Window (Time-boxing Banner) -->
+    @if (activeWindow != null)
+    {
+        var now = DateTime.UtcNow;
+        var isClosingSoon = !isSubmissionClosed && (activeWindow.ClosureDate - now).TotalDays <= 3;
+        <div class="p-4 sm:p-5 rounded-2xl border transition-all @(isSubmissionClosed ? "bg-red-50/80 border-red-200" : isClosingSoon ? "bg-amber-50/80 border-amber-200" : "bg-gradient-to-r from-blue-50/80 to-indigo-50/80 border-blue-200/70") flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+            <div class="flex items-start gap-3">
+                <div class="p-2.5 rounded-xl @(isSubmissionClosed ? "bg-red-100 text-red-700" : isClosingSoon ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-700") flex-shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Đợt nộp bài hiện tại:</span>
+                        <h4 class="font-black text-gray-900 text-sm">@activeWindow.Name</h4>
+                        @if (isSubmissionClosed)
+                        {
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-100 text-red-700 border border-red-200">
+                                ⛔ ĐÃ ĐÓNG NỘP BÀI
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                🟢 ĐANG MỞ
+                            </span>
+                        }
+                    </div>
+                    <p class="text-xs text-gray-600 mt-1 flex items-center gap-3 flex-wrap">
+                        <span>Hạn chót nộp bài: <strong class="@(isSubmissionClosed ? "text-red-700" : "text-gray-900")">@activeWindow.ClosureDate.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</strong></span>
+                        <span>•</span>
+                        <span>Hạn đóng tương tác: <strong>@activeWindow.FinalClosureDate.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</strong></span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    }
+    else if (!currentUser.IsAdmin)
+    {
+        <div class="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-center gap-3 text-amber-800 text-sm">
+            <svg class="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <span>Hệ thống hiện chưa có Đợt nộp bài nào được kích hoạt. Bạn vui lòng liên hệ Ban quản trị để mở đợt nộp bài.</span>
+        </div>
+    }
 
     <!-- Form Card -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
@@ -45,8 +99,8 @@
                     <span asp-validation-for="Slug" class="text-xs text-rose-500 mt-1 block"></span>
                 </div>
 
-                <!-- Category, Department & Author -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <!-- Category & Department -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label asp-for="CategoryId" class="block text-sm font-semibold text-gray-700 mb-1">Chuyên mục <span class="text-rose-500">*</span></label>
                         <select asp-for="CategoryId" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white" asp-items="ViewBag.CategoryId" required>
@@ -56,19 +110,82 @@
                     </div>
 
                     <div>
-                        <label asp-for="DepartmentId" class="block text-sm font-semibold text-gray-700 mb-1">Phòng ban phụ trách</label>
-                        <select asp-for="DepartmentId" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white" asp-items="ViewBag.DepartmentId">
-                            <option value="">-- Chọn phòng ban --</option>
-                        </select>
-                        <span asp-validation-for="DepartmentId" class="text-xs text-rose-500 mt-1 block"></span>
+                        <label asp-for="DepartmentId" class="block text-sm font-semibold text-gray-700 mb-1">
+                            Phòng ban phụ trách <span class="text-rose-500">*</span>
+                        </label>
+                        @if (ViewBag.IsDepartmentLocked == true)
+                        {
+                            @if (ViewBag.UserHasNoDepartment == true)
+                            {
+                                <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start gap-2">
+                                    <span class="text-base">⚠️</span>
+                                    <div>
+                                        <span class="font-bold block text-amber-900">Chưa được xếp phòng ban</span>
+                                        <span>Tài khoản của bạn chưa được gán phòng ban. Vui lòng liên hệ Admin trước khi nộp bài.</span>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="p-2.5 bg-blue-50/80 border border-blue-200 rounded-xl flex items-center justify-between">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-sm flex-shrink-0">
+                                            🏢
+                                        </div>
+                                        <div>
+                                            <span class="text-xs font-bold text-blue-900 block">@ViewBag.LockedDepartmentName</span>
+                                            <span class="text-[10px] text-blue-600">Phòng ban của bạn (Cố định, không thể đổi)</span>
+                                        </div>
+                                    </div>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-200/80 text-blue-800">Cố định</span>
+                                </div>
+                                <input type="hidden" asp-for="DepartmentId" value="@ViewBag.LockedDepartmentId" />
+                            }
+                        }
+                        else
+                        {
+                            <select asp-for="DepartmentId" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white" asp-items="ViewBag.DepartmentId">
+                                <option value="">-- Chọn phòng ban --</option>
+                            </select>
+                            <span asp-validation-for="DepartmentId" class="text-xs text-rose-500 mt-1 block"></span>
+                        }
+                    </div>
+                </div>
+
+                <!-- Tác giả hiển thị & Đăng bài ẩn danh -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Author info card (Auto-assigned) -->
+                    <div class="p-4 rounded-2xl bg-gray-50 border border-gray-200/80 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <img src="@currentUser.GetAvatarOrDefault()" alt="@currentUser.DisplayName" class="w-10 h-10 rounded-full object-cover border border-gray-200 shadow-xs" />
+                            <div>
+                                <span class="text-[11px] uppercase font-bold text-gray-400 block tracking-wider">Tác giả bài viết</span>
+                                <span class="text-sm font-bold text-gray-800">@currentUser.DisplayName</span>
+                            </div>
+                        </div>
+                        <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
+                            ✓ Tự động gắn
+                        </span>
                     </div>
 
-                    <div>
-                        <label asp-for="AuthorId" class="block text-sm font-semibold text-gray-700 mb-1">Tác giả <span class="text-rose-500">*</span></label>
-                        <select asp-for="AuthorId" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white" asp-items="ViewBag.AuthorId" required>
-                            <option value="">-- Chọn tác giả --</option>
-                        </select>
-                        <span asp-validation-for="AuthorId" class="text-xs text-rose-500 mt-1 block"></span>
+                    <!-- Đăng ẩn danh Toggle -->
+                    <div class="p-4 rounded-2xl bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-xl flex-shrink-0 shadow-xs">
+                                🎭
+                            </div>
+                            <div>
+                                <label for="isAnonymousCheck" class="text-sm font-bold text-gray-900 cursor-pointer flex items-center gap-1.5">
+                                    <span>Đăng bài ẩn danh</span>
+                                    <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-purple-200 text-purple-800">Riêng tư</span>
+                                </label>
+                                <p class="text-[11px] text-gray-500 mt-0.5">Ẩn danh tính thành <strong>"Người dùng ẩn danh"</strong> đối với bạn đọc.</p>
+                            </div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                            <input asp-for="IsAnonymous" type="checkbox" id="isAnonymousCheck" class="sr-only peer" />
+                            <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        </label>
                     </div>
                 </div>
 
@@ -170,10 +287,20 @@
             <!-- Action Buttons -->
             <div class="pt-6 border-t border-gray-100 flex items-center justify-end gap-3">
                 <a asp-action="Index" class="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium transition-all">Hủy bỏ</a>
-                <button type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-all flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                    Lưu bài viết
-                </button>
+                @if (isSubmissionClosed)
+                {
+                    <button type="button" disabled class="px-6 py-2.5 rounded-xl bg-gray-300 text-gray-500 text-sm font-semibold cursor-not-allowed flex items-center gap-2" title="Đợt nộp bài đã đóng">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        Đợt nộp đã đóng
+                    </button>
+                }
+                else
+                {
+                    <button type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-all flex items-center gap-2 active:scale-95">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        Lưu và Nộp bài
+                    </button>
+                }
             </div>
         </form>
     </div>

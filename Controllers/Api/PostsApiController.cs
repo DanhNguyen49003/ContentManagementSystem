@@ -25,7 +25,19 @@ namespace ContentManagementSystem.Controllers.Api
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var posts = await _postService.GetAllAsync();
+            var posts = await _postService.GetAllAsync();            bool canSeeAuthor = User.IsInRole("Admin") || User.IsInRole("QA Manager") || User.IsInRole("QA Coordinator");
+            if (!canSeeAuthor)
+            {
+                var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                foreach (var p in posts)
+                {
+                    if (p.IsAnonymous && p.AuthorId != currentUserId)
+                    {
+                        p.AuthorName = "Người dùng ẩn danh";
+                        p.AuthorId = string.Empty;
+                    }
+                }
+            }
             return Ok(ApiResponse<List<PostDto>>.Ok(posts));
         }
 
@@ -38,6 +50,15 @@ namespace ContentManagementSystem.Controllers.Api
             {
                 return NotFound(ApiResponse<string>.Fail("Không tìm thấy bài viết."));
             }
+
+            bool canSeeAuthor = User.IsInRole("Admin") || User.IsInRole("QA Manager") || User.IsInRole("QA Coordinator");
+            var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!canSeeAuthor && post.IsAnonymous && post.AuthorId != currentUserId)
+            {
+                post.AuthorName = "Người dùng ẩn danh";
+                post.AuthorId = string.Empty;
+            }
+
             return Ok(ApiResponse<PostDto>.Ok(post));
         }
 
@@ -49,6 +70,13 @@ namespace ContentManagementSystem.Controllers.Api
             if (!ModelState.IsValid)
             {
                 return BadRequest(ApiResponse<string>.Fail("Dữ liệu không hợp lệ."));
+            }
+
+            // Tác giả bài viết luôn là tài khoản đang đăng nhập
+            var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(currentUserId))
+            {
+                dto.AuthorId = currentUserId;
             }
 
             // Bắt buộc duyệt: Chỉ Admin mới có thể tự động xuất bản
@@ -86,6 +114,9 @@ namespace ContentManagementSystem.Controllers.Api
             {
                 return NotFound(ApiResponse<string>.Fail("Không tìm thấy bài viết để cập nhật."));
             }
+
+            // Giữ nguyên tác giả bài viết ban đầu
+            dto.AuthorId = original.AuthorId;
 
             // Nếu không phải Admin hoặc QA Coordinator, giữ nguyên trạng thái IsPublished gốc
             if (!User.IsInRole("Admin") && !User.IsInRole("QA Coordinator"))

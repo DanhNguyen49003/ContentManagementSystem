@@ -9,7 +9,7 @@ using ContentManagementSystem.Service.Interface;
 
 namespace ContentManagementSystem.Controllers
 {
-    [Authorize(Roles = "Admin,QA Manager,QA Coordinator,Customer")]
+    [Authorize(Roles = "Admin,QA Manager")]
     public class TagsController : Controller
     {
         private readonly ITagService _service;
@@ -34,14 +34,15 @@ namespace ContentManagementSystem.Controllers
             return View(dto);
         }
 
+        [Authorize(Roles = "Admin,QA Manager")]
         public IActionResult Create()
         {
-            
             return View();
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,QA Manager")]
         public async Task<IActionResult> Create(TagDto dto)
         {
             if (ModelState.IsValid)
@@ -53,6 +54,7 @@ namespace ContentManagementSystem.Controllers
             return View(dto);
         }
 
+        [Authorize(Roles = "Admin,QA Manager")]
         public async Task<IActionResult> Edit(Guid? id)
         {
             if (id == null) return NotFound();
@@ -64,6 +66,7 @@ namespace ContentManagementSystem.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,QA Manager")]
         public async Task<IActionResult> Edit(Guid id, TagDto dto)
         {
             if (id != dto.Id) return NotFound();
@@ -77,6 +80,7 @@ namespace ContentManagementSystem.Controllers
             return View(dto);
         }
 
+        [Authorize(Roles = "Admin,QA Manager")]
         public async Task<IActionResult> Delete(Guid? id)
         {
             if (id == null) return NotFound();
@@ -87,6 +91,7 @@ namespace ContentManagementSystem.Controllers
 
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,QA Manager")]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
             await _service.DeleteAsync(id);

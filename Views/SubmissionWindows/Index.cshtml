@@ -1,0 +1,126 @@
+@model IEnumerable<ContentManagementSystem.ApplicationCore.DTOs.SubmissionWindowDto>
+@{
+    ViewData["Title"] = "Quản lý Đợt nộp bài";
+    Layout = "_Layout";
+}
+
+<div class="space-y-6">
+    <!-- Page Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+                📅 Quản lý Đợt nộp bài
+            </h1>
+            <p class="text-sm text-gray-500 mt-1">Thiết lập các đợt nộp bài có thời hạn để kiểm soát luồng nộp bài của tác giả.</p>
+        </div>
+        <a asp-action="Create" class="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-sm shadow-blue-200 transition-all active:scale-95">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Tạo đợt nộp mới
+        </a>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-sm text-emerald-800 font-medium">
+            <svg class="w-5 h-5 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            @TempData["SuccessMessage"]
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl text-sm text-red-800 font-medium">
+            <svg class="w-5 h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            @TempData["ErrorMessage"]
+        </div>
+    }
+
+    <!-- Table Card -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        @if (!Model.Any())
+        {
+            <div class="flex flex-col items-center justify-center py-20 text-center">
+                <span class="text-5xl mb-4">📭</span>
+                <h3 class="font-bold text-gray-700 text-lg">Chưa có đợt nộp bài nào</h3>
+                <p class="text-sm text-gray-500 mt-1">Tạo đợt nộp bài đầu tiên để bắt đầu nhận bài viết từ tác giả.</p>
+                <a asp-action="Create" class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    Tạo ngay
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 border-b border-gray-100">
+                        <tr>
+                            <th class="text-left px-5 py-3.5 font-bold text-gray-600 text-xs uppercase tracking-wider">Tên đợt</th>
+                            <th class="text-left px-5 py-3.5 font-bold text-gray-600 text-xs uppercase tracking-wider">Trạng thái</th>
+                            <th class="text-left px-5 py-3.5 font-bold text-gray-600 text-xs uppercase tracking-wider">Ngày bắt đầu</th>
+                            <th class="text-left px-5 py-3.5 font-bold text-gray-600 text-xs uppercase tracking-wider">Hạn nộp bài</th>
+                            <th class="text-left px-5 py-3.5 font-bold text-gray-600 text-xs uppercase tracking-wider">Hạn cuối cùng</th>
+                            <th class="text-right px-5 py-3.5 font-bold text-gray-600 text-xs uppercase tracking-wider">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                        @foreach (var w in Model)
+                        {
+                            var now = DateTime.UtcNow;
+                            var statusLabel = w.IsActive
+                                ? (now < w.StartDate ? "Sắp bắt đầu" : now <= w.ClosureDate ? "🟢 Đang mở" : now <= w.FinalClosureDate ? "🟡 Đã đóng nộp" : "⚫ Đã kết thúc")
+                                : "⚪ Tắt";
+                            var statusClasses = w.IsActive && now <= w.ClosureDate
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : w.IsActive && now <= w.FinalClosureDate
+                                    ? "bg-amber-50 text-amber-700 border-amber-200"
+                                    : "bg-gray-50 text-gray-600 border-gray-200";
+                            <tr class="hover:bg-gray-50/50 transition-colors">
+                                <td class="px-5 py-4">
+                                    <div class="font-bold text-gray-900">@w.Name</div>
+                                    @if (w.IsActive && now <= w.ClosureDate)
+                                    {
+                                        <div class="text-xs text-emerald-600 mt-0.5 font-medium">✅ Đang nhận bài viết</div>
+                                    }
+                                </td>
+                                <td class="px-5 py-4">
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border @statusClasses">
+                                        @statusLabel
+                                    </span>
+                                </td>
+                                <td class="px-5 py-4 text-gray-600 text-xs">
+                                    @w.StartDate.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                </td>
+                                <td class="px-5 py-4 text-gray-600 text-xs">
+                                    @w.ClosureDate.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                    @if (now > w.ClosureDate)
+                                    {
+                                        <span class="ml-1 text-red-500 font-bold">(Đã đóng)</span>
+                                    }
+                                </td>
+                                <td class="px-5 py-4 text-gray-600 text-xs">
+                                    @w.FinalClosureDate.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                </td>
+                                <td class="px-5 py-4">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <form asp-action="ToggleActive" asp-route-id="@w.Id" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="px-3 py-1.5 text-xs font-bold rounded-lg border transition-all @(w.IsActive ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100")">
+                                                @(w.IsActive ? "Tắt" : "Bật")
+                                            </button>
+                                        </form>
+                                        <a asp-action="Edit" asp-route-id="@w.Id" class="px-3 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-all">
+                                            Sửa
+                                        </a>
+                                        <a asp-action="Delete" asp-route-id="@w.Id" class="px-3 py-1.5 text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 transition-all">
+                                            Xóa
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

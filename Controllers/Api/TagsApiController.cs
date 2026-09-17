@@ -42,7 +42,7 @@ namespace ContentManagementSystem.Controllers.Api
         }
 
         // POST: api/tags
-        [Authorize(Roles = "Admin,QA Manager,QA Coordinator,Customer")]
+        [Authorize(Roles = "Admin,QA Manager,QA Coordinator")]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] TagDto dto)
         {
@@ -61,7 +61,7 @@ namespace ContentManagementSystem.Controllers.Api
         }
 
         // PUT: api/tags/{id}
-        [Authorize(Roles = "Admin,QA Manager,QA Coordinator,Customer")]
+        [Authorize(Roles = "Admin,QA Manager,QA Coordinator")]
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] TagDto dto)
         {
@@ -85,7 +85,7 @@ namespace ContentManagementSystem.Controllers.Api
         }
 
         // DELETE: api/tags/{id}
-        [Authorize(Roles = "Admin,QA Manager")]
+        [Authorize(Roles = "Admin,QA Manager,QA Coordinator")]
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)
         {

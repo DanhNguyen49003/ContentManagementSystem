@@ -4,8 +4,10 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using ContentManagementSystem.ApplicationCore.Entities.Identity;
+using ContentManagementSystem.DataLayer;
 
 namespace ContentManagementSystem.Services
 {
@@ -17,6 +19,8 @@ namespace ContentManagementSystem.Services
         public string Avatar { get; set; } = string.Empty;
         public string RoleName { get; set; } = "Khách";
         public string RoleBadgeClass { get; set; } = "bg-gray-100 text-gray-700";
+        public Guid? DepartmentId { get; set; }
+        public string DepartmentName { get; set; } = string.Empty;
         public bool IsAdmin { get; set; }
         public bool IsQAManager { get; set; }
         public bool IsQACoordinator { get; set; }
@@ -54,15 +58,18 @@ namespace ContentManagementSystem.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly UserManager<ContentUser> _userManager;
         private readonly IMemoryCache _cache;
+        private readonly ContentManageDbContext _dbContext;
 
         public CurrentUserService(
             IHttpContextAccessor httpContextAccessor,
             UserManager<ContentUser> userManager,
-            IMemoryCache cache)
+            IMemoryCache cache,
+            ContentManageDbContext dbContext)
         {
             _httpContextAccessor = httpContextAccessor;
             _userManager = userManager;
             _cache = cache;
+            _dbContext = dbContext;
         }
 
         public async Task<CurrentUserDto> GetCurrentUserAsync()
@@ -120,6 +127,45 @@ namespace ContentManagementSystem.Services
                 dto.IsQAManager = roles.Contains("QA Manager", StringComparer.OrdinalIgnoreCase) || principal.IsInRole("QA Manager");
                 dto.IsQACoordinator = roles.Contains("QA Coordinator", StringComparer.OrdinalIgnoreCase) || principal.IsInRole("QA Coordinator");
                 dto.IsCustomer = roles.Contains("Customer", StringComparer.OrdinalIgnoreCase) || principal.IsInRole("Customer");
+
+                dto.DepartmentId = user.DepartmentId;
+                if (dto.IsAdmin)
+                {
+                    dto.DepartmentName = "Toàn hệ thống";
+                }
+                else if (user.DepartmentId.HasValue)
+                {
+                    try
+                    {
+                        var dept = await _dbContext.Departments
+                            .AsNoTracking()
+                            .FirstOrDefaultAsync(d => d.Id == user.DepartmentId.Value);
+                        if (dept != null)
+                        {
+                            dto.DepartmentName = dept.Name;
+                        }
+                    }
+                    catch { }
+                }
+                else
+                {
+                    // Tự động gán phòng ban mặc định cho tài khoản nếu chưa có
+                    try
+                    {
+                        var defaultDept = await _dbContext.Departments
+                            .AsNoTracking()
+                            .OrderBy(d => d.CreatedAt)
+                            .FirstOrDefaultAsync();
+                        if (defaultDept != null)
+                        {
+                            user.DepartmentId = defaultDept.Id;
+                            dto.DepartmentId = defaultDept.Id;
+                            dto.DepartmentName = defaultDept.Name;
+                            await _userManager.UpdateAsync(user);
+                        }
+                    }
+                    catch { }
+                }
             }
             else
             {
@@ -128,6 +174,10 @@ namespace ContentManagementSystem.Services
                 dto.IsQAManager = principal.IsInRole("QA Manager");
                 dto.IsQACoordinator = principal.IsInRole("QA Coordinator");
                 dto.IsCustomer = principal.IsInRole("Customer");
+                if (dto.IsAdmin)
+                {
+                    dto.DepartmentName = "Toàn hệ thống";
+                }
             }
 
             if (dto.IsAdmin) { dto.RoleName = "Admin"; dto.RoleBadgeClass = "bg-rose-100 text-rose-700"; }

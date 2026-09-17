@@ -1,0 +1,58 @@
+@model ContentManagementSystem.ApplicationCore.DTOs.SubmissionWindowDto
+@{
+    ViewData["Title"] = "Xóa đợt nộp bài";
+    Layout = "_Layout";
+}
+
+<div class="max-w-xl mx-auto space-y-6">
+    <div>
+        <nav class="text-xs text-gray-500 flex items-center gap-2 mb-2">
+            <a asp-action="Index" class="hover:text-blue-600">Đợt nộp bài</a>
+            <span>/</span>
+            <span class="text-gray-800 font-semibold">Xóa</span>
+        </nav>
+        <h1 class="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+            🗑️ Xóa đợt nộp bài
+        </h1>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-red-200 shadow-sm p-6 space-y-5">
+        <div class="flex items-start gap-4 p-4 bg-red-50 rounded-xl">
+            <svg class="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <div>
+                <h3 class="font-bold text-red-800 text-sm">Xác nhận xóa vĩnh viễn</h3>
+                <p class="text-xs text-red-700 mt-1">Hành động này không thể hoàn tác. Các bài viết đã gán với đợt này sẽ không bị xóa nhưng sẽ mất liên kết với đợt nộp bài.</p>
+            </div>
+        </div>
+
+        <div class="space-y-3 text-sm">
+            <div class="flex items-center justify-between py-2.5 border-b border-gray-50">
+                <span class="text-gray-500 font-medium">Tên đợt</span>
+                <span class="font-bold text-gray-900">@Model.Name</span>
+            </div>
+            <div class="flex items-center justify-between py-2.5 border-b border-gray-50">
+                <span class="text-gray-500 font-medium">Ngày bắt đầu</span>
+                <span class="text-gray-700">@Model.StartDate.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+            </div>
+            <div class="flex items-center justify-between py-2.5 border-b border-gray-50">
+                <span class="text-gray-500 font-medium">Hạn nộp bài</span>
+                <span class="text-gray-700">@Model.ClosureDate.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+            </div>
+            <div class="flex items-center justify-between py-2.5">
+                <span class="text-gray-500 font-medium">Hạn cuối cùng</span>
+                <span class="text-gray-700">@Model.FinalClosureDate.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+            </div>
+        </div>
+
+        <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="flex justify-end gap-3 pt-2">
+            @Html.AntiForgeryToken()
+            <a asp-action="Index" class="px-5 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-100 rounded-xl border border-gray-200 transition-all">Hủy</a>
+            <button type="submit" class="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl shadow-sm shadow-red-200 transition-all active:scale-95">
+                <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                Xác nhận xóa
+            </button>
+        </form>
+    </div>
+</div>

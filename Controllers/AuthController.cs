@@ -117,6 +117,12 @@ namespace ContentManagementSystem.Controllers
                         user.AccessFailedCount = 0;
                         needUpdate = true;
                     }
+                    if (demoInfo.Role != "Admin" && user.DepartmentId == null)
+                    {
+                        var depts = await _departmentService.GetAllAsync();
+                        user.DepartmentId = depts.FirstOrDefault()?.Id;
+                        needUpdate = true;
+                    }
                     if (needUpdate)
                     {
                         await _userManager.UpdateAsync(user);
@@ -128,12 +134,19 @@ namespace ContentManagementSystem.Controllers
                 }
                 else
                 {
+                    Guid? deptId = null;
+                    if (demoInfo.Role != "Admin")
+                    {
+                        var depts = await _departmentService.GetAllAsync();
+                        deptId = depts.FirstOrDefault()?.Id;
+                    }
                     var newUser = new ContentUser
                     {
                         UserName = email,
                         Email = email,
                         EmailConfirmed = true,
                         FullName = demoInfo.FullName,
+                        DepartmentId = deptId,
                         CreatedAt = DateTime.UtcNow
                     };
                     var createResult = await _userManager.CreateAsync(newUser, demoInfo.Password);
@@ -288,11 +301,14 @@ namespace ContentManagementSystem.Controllers
                 return View(model);
             }
 
+            var defaultDept = (await _departmentService.GetAllAsync()).FirstOrDefault();
+
             var user = new ContentUser
             {
                 UserName = model.Email,
                 Email = model.Email,
                 FullName = model.FullName,
+                DepartmentId = defaultDept?.Id,
                 CreatedAt = DateTime.UtcNow,
                 EmailConfirmed = false // Bắt buộc xác thực qua mã OTP trước khi kích hoạt!
             };

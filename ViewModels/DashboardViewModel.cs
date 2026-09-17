@@ -47,6 +47,36 @@ namespace ContentManagementSystem.ViewModels
 
         // Recent posts for Customer & reader view
         public List<DashboardRecentPost> RecentPosts { get; set; } = new();
+
+        // ── QA Management & Quality Analytics (For QA Manager / Admin) ──
+        public int PendingPostsCount { get; set; }
+        public int ApprovedPostsCount { get; set; }
+        public int RejectedPostsCount { get; set; }
+        public int ChangesRequestedPostsCount { get; set; }
+        public double ApprovalRate { get; set; } // %
+        public double RejectionRate { get; set; } // %
+
+        // Active Submission Window Summary
+        public string? ActiveWindowName { get; set; }
+        public DateTime? ActiveWindowClosureDate { get; set; }
+        public DateTime? ActiveWindowFinalClosureDate { get; set; }
+        public bool HasActiveWindow { get; set; }
+        public bool IsActiveWindowClosed { get; set; }
+        public int DaysUntilClosure { get; set; }
+
+        // Progress per department (QA Coordinator monitoring)
+        public List<DepartmentQAMetric> DepartmentMetrics { get; set; } = new();
+    }
+
+    public class DepartmentQAMetric
+    {
+        public Guid DepartmentId { get; set; }
+        public string DepartmentName { get; set; } = string.Empty;
+        public int TotalPosts { get; set; }
+        public int ApprovedPosts { get; set; }
+        public int PendingPosts { get; set; }
+        public int RejectedPosts { get; set; }
+        public double ApprovalRate => TotalPosts > 0 ? Math.Round((double)ApprovedPosts / TotalPosts * 100, 1) : 0;
     }
 
     public class DashboardRecentPost
@@ -57,6 +87,7 @@ namespace ContentManagementSystem.ViewModels
         public string Summary { get; set; } = string.Empty;
         public string CategoryName { get; set; } = "Tin tức";
         public string AuthorName { get; set; } = "Ban biên tập";
+        public bool IsAnonymous { get; set; } = false;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public int CommentCount { get; set; } = 0;
     }
